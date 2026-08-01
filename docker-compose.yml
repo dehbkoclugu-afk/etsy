@@ -1,0 +1,12 @@
+services:
+  open-design:
+    image: ghcr.io/nexu-io/open-design:latest
+    container_name: open-design
+    restart: unless-stopped
+    ports:
+      - "3939:3939"
+    volumes:
+      - open-design-data:/data
+
+volumes:
+  open-design-data:

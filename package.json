@@ -1,0 +1,9 @@
+{
+  "name": "etsy",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Etsy project scaffold with Open Design MCP integration",
+  "scripts": {
+    "design:install": "bash scripts/install-open-design.sh"
+  }
+}
