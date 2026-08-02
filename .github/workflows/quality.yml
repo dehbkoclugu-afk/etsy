@@ -51,10 +51,16 @@ jobs:
         env:
           PINFORGE_DEBUG: "0"
         run: python manage.py check --deploy
+      - name: Collect static assets
+        run: python manage.py collectstatic --noinput
       - name: Lint
         run: ruff check src tests manage.py
       - name: Type check
         run: mypy src/pinforge src/pinforge_web src/pinforge_saas
+      - name: SaaS render worker smoke
+        run: >-
+          pytest
+          tests/saas/test_render_jobs.py::test_run_jobs_once_management_command_processes_one_job
       - name: Test and coverage
         env:
           QT_QPA_PLATFORM: offscreen

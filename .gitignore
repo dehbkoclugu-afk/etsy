@@ -11,3 +11,4 @@ dist/
 *.egg-info/
 pinforge.db
 exports/
+var/
