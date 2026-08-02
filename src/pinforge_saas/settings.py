@@ -63,6 +63,9 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 AUTH_USER_MODEL = "pinforge_web.User"
+LOGIN_URL = "login"
+LOGIN_REDIRECT_URL = "dashboard"
+LOGOUT_REDIRECT_URL = "login"
 WSGI_APPLICATION = "pinforge_saas.wsgi.application"
 ASGI_APPLICATION = "pinforge_saas.asgi.application"
 
