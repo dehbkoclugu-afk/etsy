@@ -38,6 +38,11 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 pinforge = ["assets/fonts/*"]
+pinforge_web = [
+  "templates/*.html",
+  "templates/registration/*.html",
+  "templates/pinforge_web/*.html",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
