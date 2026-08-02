@@ -9,9 +9,11 @@ description = "Etsy ürünlerinden Pinterest pin görselleri üreten masaüstü 
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+  "Django>=5.2,<5.3",
   "httpx>=0.28,<1",
   "keyring>=25,<26",
   "Pillow>=12.3,<13",
+  "psycopg[binary]>=3.2,<4",
   "PySide6>=6.8,<7",
   "tzdata>=2026.3,<2027",
 ]
@@ -22,6 +24,7 @@ dev = [
   "pip-audit>=2.9,<3",
   "pytest>=8.3,<10",
   "pytest-cov>=6,<7",
+  "pytest-django>=4.11,<5",
   "ruff>=0.11,<1",
 ]
 build = ["pyinstaller>=6.11,<7"]
@@ -39,6 +42,8 @@ pinforge = ["assets/fonts/*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+DJANGO_SETTINGS_MODULE = "pinforge_saas.settings"
+python_files = ["test_*.py"]
 
 [tool.mypy]
 python_version = "3.11"
