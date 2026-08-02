@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Listings · PinForge{% endblock %}
+{% block content %}
+  <h1>Listings</h1>
+  <p><a href="{% url 'listing-create' %}">Add an Etsy listing</a></p>
+  {% if listings %}
+    <ul>
+      {% for listing in listings %}
+        <li>
+          <a href="{% url 'listing-detail' listing.id %}">{{ listing.title }}</a>
+          · {{ listing.currency }} {{ listing.price_minor }} minor units
+          · {{ listing.images.count }} image{{ listing.images.count|pluralize }}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>Your catalog is empty. Add one listing to create your first pin.</p>
+  {% endif %}
+{% endblock %}

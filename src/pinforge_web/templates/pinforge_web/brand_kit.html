@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Brand kit · PinForge{% endblock %}
+{% block content %}
+  <h1>Brand kit</h1>
+  <p>These settings keep every Pinterest creative visually consistent.</p>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Save brand kit</button>
+  </form>
+{% endblock %}

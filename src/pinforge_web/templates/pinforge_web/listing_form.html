@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Add listing · PinForge{% endblock %}
+{% block content %}
+  <h1>Add an Etsy listing</h1>
+  <p>Images stay private and are only used to render your creatives.</p>
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Add listing</button>
+  </form>
+{% endblock %}

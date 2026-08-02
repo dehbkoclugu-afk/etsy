@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}{{ listing.title }} · PinForge{% endblock %}
+{% block content %}
+  <p><a href="{% url 'listing-list' %}">Back to listings</a></p>
+  <h1>{{ listing.title }}</h1>
+  <p><a href="{{ listing.listing_url }}" rel="noreferrer">Open Etsy listing</a></p>
+  <dl>
+    <dt>Price</dt><dd>{{ listing.currency }} {{ listing.price_minor }} minor units</dd>
+    <dt>Vertical</dt><dd>{{ listing.vertical }}</dd>
+    <dt>Images</dt><dd>{{ listing.images.count }}</dd>
+  </dl>
+  {% if listing.tags %}
+    <h2>Tags</h2>
+    <ul>{% for tag in listing.tags %}<li>{{ tag }}</li>{% endfor %}</ul>
+  {% endif %}
+  <h2>Creatives</h2>
+  <p>Creative rendering is the next step in this workspace.</p>
+{% endblock %}

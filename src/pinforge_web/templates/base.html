@@ -7,6 +7,16 @@
   </head>
   <body>
     <a href="#main">Skip to content</a>
+    <header>
+      <a href="{% url 'dashboard' %}">PinForge</a>
+      {% if user.is_authenticated %}
+        <nav aria-label="Primary navigation">
+          <a href="{% url 'listing-list' %}">Listings</a>
+          <a href="{% url 'listing-create' %}">Add listing</a>
+          <a href="{% url 'brand-kit' %}">Brand kit</a>
+        </nav>
+      {% endif %}
+    </header>
     {% if messages %}
       <ul aria-label="Messages">
         {% for message in messages %}<li>{{ message }}</li>{% endfor %}
