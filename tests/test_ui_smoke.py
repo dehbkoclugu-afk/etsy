@@ -21,6 +21,11 @@ def test_window_opens_offscreen(tmp_path: Path) -> None:
     runtime = PinForgeRuntime(tmp_path, MemorySecretStore())
     window = PinForgeWindow(runtime)
     assert window.windowTitle() == "PinForge"
-    assert window.tabs.count() == 3
+    assert [window.tabs.tabText(index) for index in range(window.tabs.count())] == [
+        "Pin üret",
+        "Kuyruk",
+        "Büyüme",
+        "Ayarlar",
+    ]
     window.close()
     app.processEvents()
