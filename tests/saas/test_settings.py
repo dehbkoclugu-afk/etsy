@@ -3,7 +3,10 @@ from __future__ import annotations
 import pytest
 from django.core.exceptions import ImproperlyConfigured
 
-from pinforge_saas.settings import validate_production_settings
+from pinforge_saas.settings import (
+    resolve_private_media_root,
+    validate_production_settings,
+)
 
 
 def test_production_requires_a_non_default_secret() -> None:
@@ -43,3 +46,23 @@ def test_development_allows_explicit_sqlite_test_database() -> None:
         allowed_hosts=[],
         database_engine="django.db.backends.sqlite3",
     )
+
+
+def test_production_requires_an_explicit_private_media_root() -> None:
+    with pytest.raises(ImproperlyConfigured, match="PINFORGE_PRIVATE_MEDIA_ROOT"):
+        resolve_private_media_root(
+            configured="",
+            debug=False,
+            test_sqlite=False,
+        )
+
+
+def test_development_private_media_root_stays_inside_project() -> None:
+    root = resolve_private_media_root(
+        configured="",
+        debug=True,
+        test_sqlite=False,
+    )
+
+    assert root.name == "private-media"
+    assert root.parent.name == "var"

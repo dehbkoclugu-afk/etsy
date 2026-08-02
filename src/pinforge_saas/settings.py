@@ -39,6 +39,27 @@ def validate_production_settings(
     if database_engine != "django.db.backends.postgresql":
         raise ImproperlyConfigured("PostgreSQL is required in production")
 
+
+def resolve_private_media_root(
+    *,
+    configured: str,
+    debug: bool,
+    test_sqlite: bool,
+) -> Path:
+    value = configured.strip()
+    if value:
+        path = Path(value).expanduser()
+        if not path.is_absolute():
+            raise ImproperlyConfigured(
+                "PINFORGE_PRIVATE_MEDIA_ROOT must be an absolute path"
+            )
+        return path.resolve()
+    if debug or test_sqlite:
+        return BASE_DIR / "var" / "private-media"
+    raise ImproperlyConfigured(
+        "PINFORGE_PRIVATE_MEDIA_ROOT must be set in production"
+    )
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -118,6 +139,24 @@ validate_production_settings(
     allowed_hosts=ALLOWED_HOSTS,
     database_engine=str(DATABASES["default"]["ENGINE"]),
 )
+
+MEDIA_ROOT = resolve_private_media_root(
+    configured=os.environ.get("PINFORGE_PRIVATE_MEDIA_ROOT", ""),
+    debug=DEBUG,
+    test_sqlite=TEST_SQLITE,
+)
+MEDIA_URL = "/private-media-disabled/"
+FILE_UPLOAD_MAX_MEMORY_SIZE = 15 * 1024 * 1024
+DATA_UPLOAD_MAX_MEMORY_SIZE = 25 * 1024 * 1024
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+        "OPTIONS": {"location": MEDIA_ROOT, "base_url": None},
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
 
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"

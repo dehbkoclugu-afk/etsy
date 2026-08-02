@@ -34,6 +34,7 @@ jobs:
       PINFORGE_DB_PASSWORD: pinforge-ci-only
       PINFORGE_DB_HOST: 127.0.0.1
       PINFORGE_DB_PORT: "5432"
+      PINFORGE_PRIVATE_MEDIA_ROOT: /tmp/pinforge-private-media
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
