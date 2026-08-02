@@ -7,7 +7,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.files.uploadedfile import UploadedFile
 from django.core.validators import RegexValidator
 
-from pinforge_web.models import BrandKit, User
+from pinforge_web.models import BrandKit, Creative, User
 
 
 class MultipleFileInput(forms.ClearableFileInput):
@@ -97,6 +97,24 @@ class BrandKitForm(forms.ModelForm):
             "body_font",
             "body_bold_font",
         )
+
+
+class CreativeForm(forms.Form):
+    template_id = forms.ChoiceField(
+        choices=Creative.Template.choices,
+        label="Template",
+    )
+    title = forms.CharField(max_length=100)
+    description = forms.CharField(
+        required=False,
+        max_length=500,
+        widget=forms.Textarea(attrs={"rows": 4}),
+    )
+    alt_text = forms.CharField(
+        max_length=500,
+        help_text="Describe the visual for accessibility and Pinterest search.",
+        widget=forms.Textarea(attrs={"rows": 3}),
+    )
 
 
 class SignUpForm(forms.Form):

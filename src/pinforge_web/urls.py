@@ -11,6 +11,21 @@ urlpatterns = [
         views.listing_detail,
         name="listing-detail",
     ),
+    path(
+        "listings/<uuid:listing_id>/creatives/",
+        views.creative_create,
+        name="creative-create",
+    ),
+    path(
+        "creatives/<uuid:creative_id>/",
+        views.creative_detail,
+        name="creative-detail",
+    ),
+    path(
+        "creatives/<uuid:creative_id>/download/",
+        views.creative_download,
+        name="creative-download",
+    ),
     path("brand/", views.brand_kit, name="brand-kit"),
     path("", views.dashboard, name="dashboard"),
 ]

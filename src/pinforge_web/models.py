@@ -262,6 +262,13 @@ class Creative(TimestampedUUIDModel):
 
     class Meta:
         ordering = ("-created_at", "id")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("organization", "listing", "input_revision"),
+                condition=~models.Q(input_revision=""),
+                name="unique_creative_input_revision",
+            )
+        ]
 
 
 class CreativeAsset(TimestampedUUIDModel):

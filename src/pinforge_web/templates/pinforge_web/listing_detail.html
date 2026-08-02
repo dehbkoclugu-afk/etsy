@@ -13,6 +13,23 @@
     <h2>Tags</h2>
     <ul>{% for tag in listing.tags %}<li>{{ tag }}</li>{% endfor %}</ul>
   {% endif %}
+  <h2>Create a Pinterest pin</h2>
+  <form method="post" action="{% url 'creative-create' listing.id %}">
+    {% csrf_token %}
+    {{ creative_form.as_p }}
+    <button type="submit">Queue creative</button>
+  </form>
   <h2>Creatives</h2>
-  <p>Creative rendering is the next step in this workspace.</p>
+  {% if creatives %}
+    <ul>
+      {% for creative in creatives %}
+        <li>
+          <a href="{% url 'creative-detail' creative.id %}">{{ creative.title }}</a>
+          · {{ creative.get_template_id_display }} · {{ creative.get_status_display }}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>No creatives yet.</p>
+  {% endif %}
 {% endblock %}
