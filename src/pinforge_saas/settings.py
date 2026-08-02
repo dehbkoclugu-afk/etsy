@@ -3,10 +3,13 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+
 BASE_DIR = Path(__file__).resolve().parents[2]
 TEST_SQLITE = os.environ.get("PINFORGE_TEST_SQLITE") == "1"
 DEBUG = os.environ.get("PINFORGE_DEBUG", "1" if TEST_SQLITE else "0") == "1"
-SECRET_KEY = os.environ.get("PINFORGE_SECRET_KEY", "pinforge-dev-only-secret")
+DEV_SECRET_KEY = "pinforge-dev-only-secret"
+SECRET_KEY = os.environ.get("PINFORGE_SECRET_KEY", DEV_SECRET_KEY)
 ALLOWED_HOSTS = [
     host.strip()
     for host in os.environ.get(
@@ -14,6 +17,27 @@ ALLOWED_HOSTS = [
     ).split(",")
     if host.strip()
 ]
+
+
+def validate_production_settings(
+    *,
+    debug: bool,
+    secret_key: str,
+    allowed_hosts: list[str],
+    database_engine: str,
+) -> None:
+    if debug:
+        return
+    if secret_key == DEV_SECRET_KEY:
+        raise ImproperlyConfigured(
+            "PINFORGE_SECRET_KEY must be set in production"
+        )
+    if not allowed_hosts:
+        raise ImproperlyConfigured(
+            "PINFORGE_ALLOWED_HOSTS must be set in production"
+        )
+    if database_engine != "django.db.backends.postgresql":
+        raise ImproperlyConfigured("PostgreSQL is required in production")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -88,9 +112,26 @@ else:
         }
     }
 
+validate_production_settings(
+    debug=DEBUG,
+    secret_key=SECRET_KEY,
+    allowed_hosts=ALLOWED_HOSTS,
+    database_engine=str(DATABASES["default"]["ENGINE"]),
+)
+
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+SESSION_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SECURE = not DEBUG
+SECURE_SSL_REDIRECT = not DEBUG
+SECURE_HSTS_SECONDS = 31_536_000 if not DEBUG else 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
+SECURE_HSTS_PRELOAD = not DEBUG
+SECURE_REFERRER_POLICY = "same-origin"
+X_FRAME_OPTIONS = "DENY"
