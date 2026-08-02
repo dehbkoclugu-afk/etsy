@@ -200,7 +200,7 @@ başlatıldığında testleri çalıştırıp aynı ZIP artifact'ini üretir.
 ## Geliştirme
 
 ```bash
-python -m pip install -e ".[dev]"
+python -m pip install -r requirements.lock -e .
 pytest --cov=pinforge
 ruff check src tests
 mypy src/pinforge
@@ -211,6 +211,32 @@ Testler gerçek API çağrısı yapmadan OAuth, API sayfalama, structured output
 görsel önbelleği, pin payload'ı, eşzamanlı SQLite claim/kota işlemi, makbuz
 kurtarma, DST zamanlaması ve retry/dead-letter davranışlarını sınar. Üretim ve CI
 kurulumlarında denetlenmiş tam sürümler için `requirements.lock` kullanılabilir.
+
+## SaaS geliştirme
+
+Django web uygulaması masaüstü çekirdeğinin yanında, aynı depoda bulunur. Yerel
+PostgreSQL servisini başlatıp örnek geliştirme ayarlarını yükleyin:
+
+```bash
+docker compose -f docker-compose.saas.yml up -d postgres
+set -a && . ./.env.example && set +a
+python manage.py migrate
+python manage.py runserver
+```
+
+Bu çalışma ortamında PostgreSQL veya Docker bulunmadığında yalnız hızlı SaaS
+testleri açıkça SQLite ile çalıştırılabilir:
+
+```bash
+PINFORGE_TEST_SQLITE=1 pytest tests/saas
+```
+
+Production ve GitHub CI entegrasyon testleri PostgreSQL kullanır; SQLite bir
+deployment seçeneği değildir. Mimari kararlar
+[SaaS tasarımında](docs/superpowers/specs/2026-08-02-pinforge-saas-design.md),
+ilk uygulama dilimi ise
+[SaaS foundation planında](docs/superpowers/plans/2026-08-02-pinforge-saas-foundation.md)
+belgelenmiştir.
 
 ## Veri güvenliği ve kurtarma
 
