@@ -1,0 +1,16 @@
+{
+  "products": [
+    {
+      "id": "welcome-book",
+      "title": "Modern Airbnb Welcome Book Template",
+      "listing_url": "https://www.etsy.com/listing/123456789/welcome-book-template",
+      "price": 12.9,
+      "currency": "USD",
+      "vertical": "airbnb",
+      "tags": ["airbnb welcome book", "host template", "guest guide"],
+      "description": "Help every guest feel at home with an editable welcome book designed for clear, thoughtful hosting.",
+      "images": ["product.jpg", "product-alt.jpg"]
+    }
+  ]
+}
+

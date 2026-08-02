@@ -1,0 +1,11 @@
+# Direct runtime and quality-tool versions validated for PinForge 0.2.0.
+httpx==0.28.1
+keyring==25.7.0
+Pillow==12.3.0
+PySide6==6.8.3
+mypy==1.20.2
+pip-audit==2.10.1
+pytest==9.1.1
+pytest-cov==6.3.0
+ruff==0.11.13
+tzdata==2026.3

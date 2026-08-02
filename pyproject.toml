@@ -1,0 +1,64 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pinforge"
+version = "0.2.0"
+description = "Etsy ürünlerinden Pinterest pin görselleri üreten masaüstü araç"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "httpx>=0.28,<1",
+  "keyring>=25,<26",
+  "Pillow>=12.3,<13",
+  "PySide6>=6.8,<7",
+  "tzdata>=2026.3,<2027",
+]
+
+[project.optional-dependencies]
+dev = [
+  "mypy>=1.17,<2",
+  "pip-audit>=2.9,<3",
+  "pytest>=8.3,<10",
+  "pytest-cov>=6,<7",
+  "ruff>=0.11,<1",
+]
+build = ["pyinstaller>=6.11,<7"]
+
+[project.scripts]
+pinforge = "pinforge.cli:main"
+pinforge-gui = "pinforge.ui.app:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+pinforge = ["assets/fonts/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+check_untyped_defs = true
+exclude = "(^|/)(ui|rendering)/"
+
+[[tool.mypy.overrides]]
+module = ["pinforge.ui.*", "pinforge.rendering.*"]
+ignore_errors = true
+
+[tool.coverage.run]
+source = ["pinforge"]
+omit = [
+  "src/pinforge/__main__.py",
+  "src/pinforge/cli.py",
+  "src/pinforge/ui/*",
+]
+
+[tool.coverage.report]
+fail_under = 70
+show_missing = true
+skip_covered = true
