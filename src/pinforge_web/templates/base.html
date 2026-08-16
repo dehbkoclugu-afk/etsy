@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}PinForge{% endblock %}</title>
+  </head>
+  <body>
+    <a href="#main">Skip to content</a>
+    <header>
+      <a href="{% url 'dashboard' %}">PinForge</a>
+      {% if user.is_authenticated %}
+        <nav aria-label="Primary navigation">
+          <a href="{% url 'listing-list' %}">Listings</a>
+          <a href="{% url 'listing-create' %}">Add listing</a>
+          <a href="{% url 'brand-kit' %}">Brand kit</a>
+        </nav>
+      {% endif %}
+    </header>
+    {% if messages %}
+      <ul aria-label="Messages">
+        {% for message in messages %}<li>{{ message }}</li>{% endfor %}
+      </ul>
+    {% endif %}
+    <main id="main">{% block content %}{% endblock %}</main>
+  </body>
+</html>

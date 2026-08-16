@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Create account · PinForge{% endblock %}
+{% block content %}
+  <h1>Create your PinForge workspace</h1>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Create workspace</button>
+  </form>
+  <p><a href="{% url 'login' %}">Already have an account?</a></p>
+{% endblock %}

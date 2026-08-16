@@ -200,7 +200,7 @@ başlatıldığında testleri çalıştırıp aynı ZIP artifact'ini üretir.
 ## Geliştirme
 
 ```bash
-python -m pip install -e ".[dev]"
+python -m pip install -r requirements.lock -e .
 pytest --cov=pinforge
 ruff check src tests
 mypy src/pinforge
@@ -211,6 +211,68 @@ Testler gerçek API çağrısı yapmadan OAuth, API sayfalama, structured output
 görsel önbelleği, pin payload'ı, eşzamanlı SQLite claim/kota işlemi, makbuz
 kurtarma, DST zamanlaması ve retry/dead-letter davranışlarını sınar. Üretim ve CI
 kurulumlarında denetlenmiş tam sürümler için `requirements.lock` kullanılabilir.
+
+## SaaS geliştirme
+
+Django web uygulaması masaüstü çekirdeğinin yanında, aynı depoda bulunur. Yerel
+PostgreSQL servisini başlatıp örnek geliştirme ayarlarını yükleyin:
+
+```bash
+docker compose -f docker-compose.saas.yml up -d postgres
+set -a && . ./.env.example && set +a
+python manage.py migrate
+python manage.py runserver
+```
+
+Tarayıcıdan hesap oluşturduktan sonra temel ürün akışı şöyledir:
+
+1. **Brand kit** sayfasında mağaza adı, renkler ve paketlenmiş fontları kaydedin.
+2. **Add listing** ile Etsy ilan bağlantısını, fiyatı, etiketleri ve 1–5 PNG/JPEG
+   ürün görselini özel kataloğa yükleyin.
+3. İlan sayfasında beş Pinterest şablonundan birini ve pin metnini seçip yaratıcıyı
+   kuyruğa alın.
+4. Worker renderı tamamladığında yaratıcı sayfasından 1000 × 1500 PNG'yi indirin.
+
+Web ve worker ayrı proseslerdir; ikisi aynı PostgreSQL veritabanını ve aynı özel
+medya diskini görmelidir:
+
+```bash
+# release prosesi
+python manage.py migrate --noinput
+python manage.py collectstatic --noinput
+
+# web prosesi
+python manage.py runserver
+
+# worker prosesi (sürekli)
+python manage.py run_jobs
+
+# tanılama veya cron için en fazla bir iş
+python manage.py run_jobs --once
+```
+
+`PINFORGE_PRIVATE_MEDIA_ROOT` mutlak bir dizin olmalıdır. Bu dizin web sunucusunda
+statik/media URL olarak yayınlanmaz; dosyalar yalnız oturum ve tenant kontrolü yapan
+indirme görünümünden stream edilir. Kalıcı bir deployment'ta web ve worker için aynı
+şifreli volume bağlanmalı ve yedeklenmelidir. Üretim ayarları ayrıca PostgreSQL,
+uzun rastgele `PINFORGE_SECRET_KEY`, gerçek `PINFORGE_ALLOWED_HOSTS` ve HTTPS ister.
+
+Bu çalışma ortamında PostgreSQL veya Docker bulunmadığında yalnız hızlı SaaS
+testleri açıkça SQLite ile çalıştırılabilir:
+
+```bash
+PINFORGE_TEST_SQLITE=1 pytest tests/saas
+```
+
+Production ve GitHub CI entegrasyon testleri PostgreSQL kullanır; SQLite bir
+deployment seçeneği değildir. Mimari kararlar
+[SaaS tasarımında](docs/superpowers/specs/2026-08-02-pinforge-saas-design.md),
+ilk uygulama dilimi ise
+[SaaS foundation planında](docs/superpowers/plans/2026-08-02-pinforge-saas-foundation.md)
+belgelenmiştir. Manuel katalog, dayanıklı render kuyruğu ve özel indirme diliminin
+ayrıntıları
+[catalog/render planında](docs/superpowers/plans/2026-08-02-pinforge-catalog-render-slice.md)
+bulunur.
 
 ## Veri güvenliği ve kurtarma
 

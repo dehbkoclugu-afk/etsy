@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}{{ organization.name }} · PinForge{% endblock %}
+{% block content %}
+  <h1>{{ organization.name }}</h1>
+  <p>Your Etsy-to-Pinterest workspace is ready.</p>
+  <p><a href="{% url 'listing-create' %}">Add your first Etsy listing</a></p>
+  <p><a href="{% url 'brand-kit' %}">Set up your brand kit</a></p>
+  <form method="post" action="{% url 'logout' %}">
+    {% csrf_token %}
+    <button type="submit">Log out</button>
+  </form>
+{% endblock %}

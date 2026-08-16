@@ -20,6 +20,9 @@ jobs:
       - name: Install
         run: python -m pip install ".[build]"
       - name: Test
+        env:
+          PINFORGE_DEBUG: "1"
+          PINFORGE_TEST_SQLITE: "1"
         run: python -m pytest
       - name: Package
         shell: pwsh
@@ -29,4 +32,3 @@ jobs:
           name: PinForge-Windows
           path: PinForge-Windows.zip
           if-no-files-found: error
-

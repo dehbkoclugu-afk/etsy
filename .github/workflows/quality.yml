@@ -11,6 +11,30 @@ permissions:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: pinforge_test
+          POSTGRES_USER: pinforge
+          POSTGRES_PASSWORD: pinforge-ci-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U pinforge -d pinforge_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      PINFORGE_DEBUG: "1"
+      PINFORGE_SECRET_KEY: pinforge-ci-only-secret-68b89d0f3a4240d28ba54a4afcda9d74
+      PINFORGE_ALLOWED_HOSTS: localhost,testserver
+      PINFORGE_DB_NAME: pinforge_test
+      PINFORGE_DB_USER: pinforge
+      PINFORGE_DB_PASSWORD: pinforge-ci-only
+      PINFORGE_DB_HOST: 127.0.0.1
+      PINFORGE_DB_PORT: "5432"
+      PINFORGE_PRIVATE_MEDIA_ROOT: /tmp/pinforge-private-media
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -19,19 +43,38 @@ jobs:
           cache: pip
       - name: Install locked dependencies
         run: python -m pip install -r requirements.lock -e .
+      - name: Check migrations
+        run: python manage.py makemigrations --check --dry-run
+      - name: Apply migrations
+        run: python manage.py migrate --noinput
+      - name: Django configuration
+        env:
+          PINFORGE_DEBUG: "0"
+        run: python manage.py check --deploy
+      - name: Collect static assets
+        run: python manage.py collectstatic --noinput
       - name: Lint
-        run: ruff check src tests
+        run: ruff check src tests manage.py
       - name: Type check
-        run: mypy src/pinforge
+        run: mypy src/pinforge src/pinforge_web src/pinforge_saas
+      - name: SaaS render worker smoke
+        run: >-
+          pytest
+          tests/saas/test_render_jobs.py::test_run_jobs_once_management_command_processes_one_job
       - name: Test and coverage
         env:
           QT_QPA_PLATFORM: offscreen
-        run: pytest --cov=pinforge --cov-report=term
+        run: >-
+          pytest --cov=pinforge --cov=pinforge_web --cov=pinforge_saas
+          --cov-report=term
       - name: Dependency audit
         run: pip-audit -r requirements.lock
 
   windows-gui:
     runs-on: windows-latest
+    env:
+      PINFORGE_DEBUG: "1"
+      PINFORGE_TEST_SQLITE: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
