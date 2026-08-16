@@ -37,7 +37,7 @@ jobs:
       PINFORGE_PRIVATE_MEDIA_ROOT: /tmp/pinforge-private-media
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
@@ -77,7 +77,7 @@ jobs:
       PINFORGE_TEST_SQLITE: "1"
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
