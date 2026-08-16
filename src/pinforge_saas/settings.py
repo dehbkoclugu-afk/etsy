@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+import hashlib
 import os
 from pathlib import Path
 
@@ -25,6 +27,7 @@ def validate_production_settings(
     secret_key: str,
     allowed_hosts: list[str],
     database_engine: str,
+    token_encryption_key: str = "",
 ) -> None:
     if debug:
         return
@@ -38,6 +41,28 @@ def validate_production_settings(
         )
     if database_engine != "django.db.backends.postgresql":
         raise ImproperlyConfigured("PostgreSQL is required in production")
+    if not token_encryption_key:
+        raise ImproperlyConfigured(
+            "PINFORGE_TOKEN_ENCRYPTION_KEY must be set in production"
+        )
+
+
+def resolve_token_encryption_key(*, configured: str, secret_key: str) -> str:
+    value = configured.strip()
+    if value:
+        try:
+            decoded = base64.urlsafe_b64decode(value.encode("ascii"))
+        except (UnicodeEncodeError, ValueError) as error:
+            raise ImproperlyConfigured(
+                "PINFORGE_TOKEN_ENCRYPTION_KEY must be a Fernet key"
+            ) from error
+        if len(decoded) != 32:
+            raise ImproperlyConfigured(
+                "PINFORGE_TOKEN_ENCRYPTION_KEY must be a Fernet key"
+            )
+        return value
+    digest = hashlib.sha256(f"pinforge-token:{secret_key}".encode()).digest()
+    return base64.urlsafe_b64encode(digest).decode("ascii")
 
 
 def resolve_private_media_root(
@@ -138,7 +163,15 @@ validate_production_settings(
     secret_key=SECRET_KEY,
     allowed_hosts=ALLOWED_HOSTS,
     database_engine=str(DATABASES["default"]["ENGINE"]),
+    token_encryption_key=os.environ.get("PINFORGE_TOKEN_ENCRYPTION_KEY", ""),
 )
+
+TOKEN_ENCRYPTION_KEY = resolve_token_encryption_key(
+    configured=os.environ.get("PINFORGE_TOKEN_ENCRYPTION_KEY", ""),
+    secret_key=SECRET_KEY,
+)
+ETSY_KEYSTRING = os.environ.get("PINFORGE_ETSY_KEYSTRING", "")
+ETSY_REDIRECT_URI = os.environ.get("PINFORGE_ETSY_REDIRECT_URI", "")
 
 MEDIA_ROOT = resolve_private_media_root(
     configured=os.environ.get("PINFORGE_PRIVATE_MEDIA_ROOT", ""),

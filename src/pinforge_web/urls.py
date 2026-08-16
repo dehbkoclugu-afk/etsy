@@ -4,6 +4,22 @@ from pinforge_web import views
 
 urlpatterns = [
     path("signup/", views.signup, name="signup"),
+    path("connections/etsy/", views.etsy_connection, name="etsy-connection"),
+    path(
+        "connections/etsy/start/",
+        views.etsy_connection_start,
+        name="etsy-connection-start",
+    ),
+    path(
+        "connections/etsy/callback/",
+        views.etsy_connection_callback,
+        name="etsy-connection-callback",
+    ),
+    path(
+        "connections/etsy/<uuid:connection_id>/disconnect/",
+        views.etsy_connection_disconnect,
+        name="etsy-connection-disconnect",
+    ),
     path("listings/", views.listing_list, name="listing-list"),
     path("listings/new/", views.listing_create, name="listing-create"),
     path(

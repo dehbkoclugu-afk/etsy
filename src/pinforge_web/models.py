@@ -102,6 +102,32 @@ class TimestampedUUIDModel(models.Model):
         abstract = True
 
 
+class ProviderConnection(TimestampedUUIDModel):
+    class Provider(models.TextChoices):
+        ETSY = "etsy", "Etsy"
+
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name="provider_connections",
+    )
+    provider = models.CharField(max_length=16, choices=Provider.choices)
+    external_account_id = models.CharField(max_length=128)
+    token_ciphertext = models.TextField()
+    scopes = models.JSONField(default=list)
+    token_expires_at = models.DateTimeField()
+    active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ("provider", "external_account_id", "id")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("provider", "external_account_id"),
+                name="unique_provider_account_connection",
+            )
+        ]
+
+
 class Shop(TimestampedUUIDModel):
     class Source(models.TextChoices):
         MANUAL = "manual", "Manual"

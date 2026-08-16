@@ -20,7 +20,9 @@ charset-normalizer==3.4.9
 coverage==7.15.2
     # via pytest-cov
 cryptography==50.0.0
-    # via secretstorage
+    # via
+    #   pinforge (pyproject.toml)
+    #   secretstorage
 cyclonedx-python-lib==11.11.0
     # via pip-audit
 defusedxml==0.7.1
