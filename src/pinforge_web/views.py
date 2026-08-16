@@ -15,21 +15,27 @@ from django.http import (
     JsonResponse,
 )
 from django.shortcuts import redirect, render
+from django.utils import timezone
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
+from pinforge.integrations.etsy.oauth import EtsyOAuth
+from pinforge.integrations.http import ApiError
+from pinforge.integrations.oauth import parse_callback
+from pinforge.integrations.pinterest.client import PinterestClient
+from pinforge.integrations.pinterest.oauth import PinterestOAuth
 from pinforge_web.catalog import CatalogValidationError, create_manual_listing
 from pinforge_web.creatives import (
     CreativeValidationError,
     create_or_enqueue_creative,
 )
-from pinforge_web.forms import BrandKitForm, CreativeForm, ListingForm, SignUpForm
-from pinforge.integrations.etsy.oauth import EtsyOAuth
-from pinforge.integrations.http import ApiError
-from pinforge.integrations.oauth import parse_callback
-from pinforge_web.etsy_connections import (
-    deserialize_attempt,
-    save_etsy_connection,
-    serialize_attempt,
+from pinforge_web.etsy_connections import save_etsy_connection
+from pinforge_web.etsy_sync import enqueue_etsy_sync
+from pinforge_web.forms import (
+    BrandKitForm,
+    CreativeForm,
+    ListingForm,
+    PinPublicationForm,
+    SignUpForm,
 )
 from pinforge_web.models import (
     BrandKit,
@@ -37,8 +43,15 @@ from pinforge_web.models import (
     CreativeAsset,
     Listing,
     Organization,
+    PinPublication,
     ProviderConnection,
 )
+from pinforge_web.oauth_sessions import deserialize_attempt, serialize_attempt
+from pinforge_web.pinterest_connections import (
+    save_pinterest_connection,
+    sync_pinterest_boards,
+)
+from pinforge_web.publishing import enqueue_pinterest_publication
 from pinforge_web.services import register_account
 from pinforge_web.tenancy import get_tenant_object_or_404
 
@@ -135,7 +148,7 @@ def etsy_connection_callback(request: HttpRequest) -> HttpResponse:
     organization = _active_organization(request)
     raw_attempt = request.session.pop("etsy_oauth_attempt", None)
     try:
-        attempt = deserialize_attempt(raw_attempt)
+        attempt = deserialize_attempt(raw_attempt, provider="etsy")
         code = parse_callback(request.GET.urlencode(), attempt.state)
         oauth = EtsyOAuth(settings.ETSY_KEYSTRING)
         try:
@@ -167,8 +180,141 @@ def etsy_connection_disconnect(
     return redirect("etsy-connection")
 
 
+@login_required
+@require_POST
+def etsy_connection_sync(request: HttpRequest, connection_id: object) -> HttpResponse:
+    organization = _active_organization(request)
+    connection = get_tenant_object_or_404(
+        ProviderConnection,
+        organization,
+        pk=connection_id,
+        provider=ProviderConnection.Provider.ETSY,
+        active=True,
+    )
+    enqueue_etsy_sync(organization=organization, connection=connection)
+    messages.success(request, "Etsy listing sync queued.")
+    return redirect("etsy-connection")
+
+
 def _etsy_is_configured() -> bool:
     return bool(settings.ETSY_KEYSTRING and settings.ETSY_REDIRECT_URI)
+
+
+@login_required
+@require_GET
+def pinterest_connection(request: HttpRequest) -> HttpResponse:
+    organization = _active_organization(request)
+    connections = ProviderConnection.objects.filter(
+        organization=organization,
+        provider=ProviderConnection.Provider.PINTEREST,
+        active=True,
+    ).prefetch_related("pinterest_boards")
+    return render(
+        request,
+        "pinforge_web/pinterest_connection.html",
+        {"connections": connections, "configured": _pinterest_is_configured()},
+    )
+
+
+@login_required
+@require_POST
+def pinterest_connection_start(request: HttpRequest) -> HttpResponse:
+    _active_organization(request)
+    if not _pinterest_is_configured():
+        messages.error(request, "Pinterest OAuth is not configured on this server.")
+        return redirect("pinterest-connection")
+    oauth = PinterestOAuth(
+        settings.PINTEREST_APP_ID,
+        settings.PINTEREST_APP_SECRET,
+    )
+    try:
+        attempt = oauth.begin(settings.PINTEREST_REDIRECT_URI)
+    finally:
+        oauth.close()
+    request.session["pinterest_oauth_attempt"] = serialize_attempt(attempt)
+    return redirect(attempt.authorization_url)
+
+
+@login_required
+@require_GET
+def pinterest_connection_callback(request: HttpRequest) -> HttpResponse:
+    organization = _active_organization(request)
+    raw_attempt = request.session.pop("pinterest_oauth_attempt", None)
+    try:
+        attempt = deserialize_attempt(raw_attempt, provider="pinterest")
+        code = parse_callback(request.GET.urlencode(), attempt.state)
+        oauth = PinterestOAuth(
+            settings.PINTEREST_APP_ID,
+            settings.PINTEREST_APP_SECRET,
+        )
+        try:
+            token = oauth.exchange(code, attempt)
+        finally:
+            oauth.close()
+        client = PinterestClient(token.access_token)
+        try:
+            account = client.get_user_account()
+        finally:
+            client.close()
+        account_id = str(account.get("id") or account.get("username") or "")
+        connection = save_pinterest_connection(
+            organization=organization,
+            account_id=account_id,
+            token=token,
+        )
+        sync_pinterest_boards(connection)
+    except (ApiError, ValueError) as error:
+        messages.error(request, str(error))
+    else:
+        messages.success(request, "Pinterest account and boards connected.")
+    return redirect("pinterest-connection")
+
+
+@login_required
+@require_POST
+def pinterest_connection_sync(
+    request: HttpRequest, connection_id: object
+) -> HttpResponse:
+    organization = _active_organization(request)
+    connection = get_tenant_object_or_404(
+        ProviderConnection,
+        organization,
+        pk=connection_id,
+        provider=ProviderConnection.Provider.PINTEREST,
+        active=True,
+    )
+    count = sync_pinterest_boards(connection)
+    messages.success(request, f"Synchronized {count} Pinterest boards.")
+    return redirect("pinterest-connection")
+
+
+@login_required
+@require_POST
+def pinterest_connection_disconnect(
+    request: HttpRequest, connection_id: object
+) -> HttpResponse:
+    organization = _active_organization(request)
+    connection = get_tenant_object_or_404(
+        ProviderConnection,
+        organization,
+        pk=connection_id,
+        provider=ProviderConnection.Provider.PINTEREST,
+    )
+    if PinPublication.objects.filter(connection=connection).exists():
+        connection.active = False
+        connection.save(update_fields=("active", "updated_at"))
+    else:
+        connection.delete()
+    messages.success(request, "Pinterest account disconnected.")
+    return redirect("pinterest-connection")
+
+
+def _pinterest_is_configured() -> bool:
+    return bool(
+        settings.PINTEREST_APP_ID
+        and settings.PINTEREST_APP_SECRET
+        and settings.PINTEREST_REDIRECT_URI
+    )
 
 
 @login_required
@@ -295,8 +441,43 @@ def creative_detail(request: HttpRequest, creative_id: object) -> HttpResponse:
     return render(
         request,
         "pinforge_web/creative_detail.html",
-        {"creative": creative, "asset": asset},
+        {
+            "creative": creative,
+            "asset": asset,
+            "publication_form": PinPublicationForm(organization=organization),
+            "publications": PinPublication.objects.filter(
+                organization=organization,
+                creative=creative,
+            ).select_related("board"),
+        },
     )
+
+
+@login_required
+@require_POST
+def creative_publish(request: HttpRequest, creative_id: object) -> HttpResponse:
+    organization = _active_organization(request)
+    creative = get_tenant_object_or_404(
+        Creative,
+        organization,
+        pk=creative_id,
+    )
+    form = PinPublicationForm(request.POST, organization=organization)
+    if form.is_valid():
+        try:
+            enqueue_pinterest_publication(
+                organization=organization,
+                creative=creative,
+                board=form.cleaned_data["board"],
+                scheduled_at=form.cleaned_data.get("scheduled_at") or timezone.now(),
+            )
+        except ValueError as error:
+            messages.error(request, str(error))
+        else:
+            messages.success(request, "Pinterest publication queued.")
+    else:
+        messages.error(request, "Choose a valid Pinterest board and time.")
+    return redirect("creative-detail", creative_id=creative.id)
 
 
 @login_required

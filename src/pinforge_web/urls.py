@@ -20,6 +20,36 @@ urlpatterns = [
         views.etsy_connection_disconnect,
         name="etsy-connection-disconnect",
     ),
+    path(
+        "connections/etsy/<uuid:connection_id>/sync/",
+        views.etsy_connection_sync,
+        name="etsy-connection-sync",
+    ),
+    path(
+        "connections/pinterest/",
+        views.pinterest_connection,
+        name="pinterest-connection",
+    ),
+    path(
+        "connections/pinterest/start/",
+        views.pinterest_connection_start,
+        name="pinterest-connection-start",
+    ),
+    path(
+        "connections/pinterest/callback/",
+        views.pinterest_connection_callback,
+        name="pinterest-connection-callback",
+    ),
+    path(
+        "connections/pinterest/<uuid:connection_id>/sync/",
+        views.pinterest_connection_sync,
+        name="pinterest-connection-sync",
+    ),
+    path(
+        "connections/pinterest/<uuid:connection_id>/disconnect/",
+        views.pinterest_connection_disconnect,
+        name="pinterest-connection-disconnect",
+    ),
     path("listings/", views.listing_list, name="listing-list"),
     path("listings/new/", views.listing_create, name="listing-create"),
     path(
@@ -41,6 +71,11 @@ urlpatterns = [
         "creatives/<uuid:creative_id>/download/",
         views.creative_download,
         name="creative-download",
+    ),
+    path(
+        "creatives/<uuid:creative_id>/publish/",
+        views.creative_publish,
+        name="creative-publish",
     ),
     path("brand/", views.brand_kit, name="brand-kit"),
     path("", views.dashboard, name="dashboard"),

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Pinterest connection · PinForge{% endblock %}
+{% block content %}
+  <h1>Pinterest connection</h1>
+  {% if connections %}
+    {% for connection in connections %}
+      <section>
+        <h2>Account {{ connection.external_account_id }}</h2>
+        <p>{{ connection.pinterest_boards.all|length }} boards synchronized.</p>
+        <form method="post" action="{% url 'pinterest-connection-sync' connection.id %}">
+          {% csrf_token %}
+          <button type="submit">Refresh boards</button>
+        </form>
+        <form method="post" action="{% url 'pinterest-connection-disconnect' connection.id %}">
+          {% csrf_token %}
+          <button type="submit">Disconnect</button>
+        </form>
+      </section>
+    {% endfor %}
+  {% elif configured %}
+    <p>Connect Pinterest to publish rendered Pins directly.</p>
+    <form method="post" action="{% url 'pinterest-connection-start' %}">
+      {% csrf_token %}
+      <button type="submit">Connect Pinterest</button>
+    </form>
+  {% else %}
+    <p>Pinterest OAuth is not configured on this server.</p>
+  {% endif %}
+{% endblock %}

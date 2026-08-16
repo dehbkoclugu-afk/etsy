@@ -5,6 +5,11 @@ PinForge, Etsy ürünlerinden veya yerel görsellerden 1000 × 1500 Pinterest pi
 PNG/CSV dışa aktarma, SQLite yayın kuyruğu, Etsy içe aktarma ve Pinterest yayınlama
 tek uygulamada bulunur. Yerel klasör ve CSV akışı API hesabı olmadan da çalışır.
 
+API erişimi beklenirken kullanılabilen kişisel Pin stüdyosu:
+[PinForge Personal](https://pinforge-personal.cihangulveren34.chatgpt.site).
+Ürün görselini yalnız tarayıcıda işler, üç tasarım stiliyle 1000 × 1500 PNG üretir
+ve Pinterest'in manuel yayın ekranına geçiş verir.
+
 ## Özellikler
 
 - Beş şablon: Mockup Hero, List Stack, Split Compare, Text Overlay ve Grid Preview
@@ -226,16 +231,19 @@ python manage.py runserver
 
 Tarayıcıdan hesap oluşturduktan sonra temel ürün akışı şöyledir:
 
-1. İsteğe bağlı Etsy OAuth akışı için `PINFORGE_ETSY_KEYSTRING` ve kayıtlı HTTPS
-   callback adresini `PINFORGE_ETSY_REDIRECT_URI` olarak ayarlayın. **Etsy
-   connection** sayfası PKCE ile hesabı bağlar ve tokenları tenant'a bağlı,
-   şifrelenmiş bir kayıtta saklar.
+1. Etsy OAuth ve senkronizasyonu için `PINFORGE_ETSY_KEYSTRING`,
+   `PINFORGE_ETSY_SHARED_SECRET` ve kayıtlı HTTPS callback adresini ayarlayın.
+   **Etsy connection** sayfası PKCE ile hesabı bağlar, tokenları tenant'a bağlı
+   şifreli saklar ve **Sync listings** ile mağaza ürünlerini özel kataloğa çeker.
 2. **Brand kit** sayfasında mağaza adı, renkler ve paketlenmiş fontları kaydedin.
 3. **Add listing** ile Etsy ilan bağlantısını, fiyatı, etiketleri ve 1–5 PNG/JPEG
    ürün görselini özel kataloğa yükleyin.
 4. İlan sayfasında beş Pinterest şablonundan birini ve pin metnini seçip yaratıcıyı
    kuyruğa alın.
-5. Worker renderı tamamladığında yaratıcı sayfasından 1000 × 1500 PNG'yi indirin.
+5. Pinterest uygulama kimliklerini ve callback adresini ayarlayıp **Pinterest**
+   sayfasından hesabı bağlayın; panolar otomatik eşitlenir.
+6. Worker renderı tamamladığında yaratıcı sayfasından 1000 × 1500 PNG'yi indirin
+   veya bir pano seçerek hemen/zamanlanmış yayın işini kuyruğa alın.
 
 Production'da OAuth token şifrelemesi için kalıcı bir Fernet anahtarı zorunludur:
 

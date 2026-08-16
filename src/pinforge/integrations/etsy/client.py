@@ -73,6 +73,15 @@ class EtsyClient:
             raise ApiError("Etsy listing sayfalama sınırı aşıldı")
         return tuple(listings)
 
+    def list_owned_shops(self, user_id: str) -> tuple[dict[str, Any], ...]:
+        if not user_id.isdigit():
+            raise ValueError("Etsy user_id sayısal olmalı")
+        payload = self._get(f"{self.API_ROOT}/users/{user_id}/shops")
+        results = payload.get("results", [])
+        if not isinstance(results, list):
+            raise ApiError("Etsy mağaza yanıtında results listesi yok")
+        return tuple(item for item in results if isinstance(item, dict))
+
     def listing_images(self, listing_id: str) -> tuple[dict[str, Any], ...]:
         payload = self._get(
             f"{self.API_ROOT}/listings/{listing_id}/images",

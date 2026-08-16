@@ -7,6 +7,10 @@
       {% for connection in connections %}
         <li>
           Etsy account {{ connection.external_account_id }}
+          <form method="post" action="{% url 'etsy-connection-sync' connection.id %}">
+            {% csrf_token %}
+            <button type="submit">Sync listings</button>
+          </form>
           <form method="post" action="{% url 'etsy-connection-disconnect' connection.id %}">
             {% csrf_token %}
             <button type="submit">Disconnect</button>
