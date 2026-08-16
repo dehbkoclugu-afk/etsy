@@ -1,0 +1,47 @@
+name: Backend quality
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install locked dependencies
+        run: python -m pip install -r requirements.lock -e .
+      - name: Lint
+        run: ruff check src tests
+      - name: Type check
+        run: mypy src/pinforge
+      - name: Test and coverage
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: pytest --cov=pinforge --cov-report=term
+      - name: Dependency audit
+        run: pip-audit -r requirements.lock
+
+  windows-gui:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install
+        run: python -m pip install -r requirements.lock ".[build]"
+      - name: Tests including GUI smoke
+        run: pytest
+      - name: Package smoke
+        shell: pwsh
+        run: ./scripts/build_windows.ps1 -SkipInstall
