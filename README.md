@@ -226,12 +226,26 @@ python manage.py runserver
 
 Tarayıcıdan hesap oluşturduktan sonra temel ürün akışı şöyledir:
 
-1. **Brand kit** sayfasında mağaza adı, renkler ve paketlenmiş fontları kaydedin.
-2. **Add listing** ile Etsy ilan bağlantısını, fiyatı, etiketleri ve 1–5 PNG/JPEG
+1. İsteğe bağlı Etsy OAuth akışı için `PINFORGE_ETSY_KEYSTRING` ve kayıtlı HTTPS
+   callback adresini `PINFORGE_ETSY_REDIRECT_URI` olarak ayarlayın. **Etsy
+   connection** sayfası PKCE ile hesabı bağlar ve tokenları tenant'a bağlı,
+   şifrelenmiş bir kayıtta saklar.
+2. **Brand kit** sayfasında mağaza adı, renkler ve paketlenmiş fontları kaydedin.
+3. **Add listing** ile Etsy ilan bağlantısını, fiyatı, etiketleri ve 1–5 PNG/JPEG
    ürün görselini özel kataloğa yükleyin.
-3. İlan sayfasında beş Pinterest şablonundan birini ve pin metnini seçip yaratıcıyı
+4. İlan sayfasında beş Pinterest şablonundan birini ve pin metnini seçip yaratıcıyı
    kuyruğa alın.
-4. Worker renderı tamamladığında yaratıcı sayfasından 1000 × 1500 PNG'yi indirin.
+5. Worker renderı tamamladığında yaratıcı sayfasından 1000 × 1500 PNG'yi indirin.
+
+Production'da OAuth token şifrelemesi için kalıcı bir Fernet anahtarı zorunludur:
+
+```bash
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+```
+
+Çıktıyı `PINFORGE_TOKEN_ENCRYPTION_KEY` olarak web ve worker proseslerine aynı
+secret üzerinden verin. Anahtarı değiştirmek mevcut bağlantı tokenlarını okunamaz
+hale getirir; secret deposunda yedekleyin.
 
 Web ve worker ayrı proseslerdir; ikisi aynı PostgreSQL veritabanını ve aynı özel
 medya diskini görmelidir:

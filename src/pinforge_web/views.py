@@ -3,6 +3,7 @@ from __future__ import annotations
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
+from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from django.db import DatabaseError, connections
 from django.db.utils import IntegrityError
@@ -22,7 +23,22 @@ from pinforge_web.creatives import (
     create_or_enqueue_creative,
 )
 from pinforge_web.forms import BrandKitForm, CreativeForm, ListingForm, SignUpForm
-from pinforge_web.models import BrandKit, Creative, CreativeAsset, Listing, Organization
+from pinforge.integrations.etsy.oauth import EtsyOAuth
+from pinforge.integrations.http import ApiError
+from pinforge.integrations.oauth import parse_callback
+from pinforge_web.etsy_connections import (
+    deserialize_attempt,
+    save_etsy_connection,
+    serialize_attempt,
+)
+from pinforge_web.models import (
+    BrandKit,
+    Creative,
+    CreativeAsset,
+    Listing,
+    Organization,
+    ProviderConnection,
+)
 from pinforge_web.services import register_account
 from pinforge_web.tenancy import get_tenant_object_or_404
 
@@ -79,6 +95,80 @@ def dashboard(request: HttpRequest) -> HttpResponse:
         "pinforge_web/dashboard.html",
         {"organization": request.organization},
     )
+
+
+@login_required
+@require_GET
+def etsy_connection(request: HttpRequest) -> HttpResponse:
+    organization = _active_organization(request)
+    connections = ProviderConnection.objects.filter(
+        organization=organization,
+        provider=ProviderConnection.Provider.ETSY,
+        active=True,
+    )
+    return render(
+        request,
+        "pinforge_web/etsy_connection.html",
+        {"connections": connections, "configured": _etsy_is_configured()},
+    )
+
+
+@login_required
+@require_POST
+def etsy_connection_start(request: HttpRequest) -> HttpResponse:
+    _active_organization(request)
+    if not _etsy_is_configured():
+        messages.error(request, "Etsy OAuth is not configured on this server.")
+        return redirect("etsy-connection")
+    oauth = EtsyOAuth(settings.ETSY_KEYSTRING)
+    try:
+        attempt = oauth.begin(settings.ETSY_REDIRECT_URI)
+    finally:
+        oauth.close()
+    request.session["etsy_oauth_attempt"] = serialize_attempt(attempt)
+    return redirect(attempt.authorization_url)
+
+
+@login_required
+@require_GET
+def etsy_connection_callback(request: HttpRequest) -> HttpResponse:
+    organization = _active_organization(request)
+    raw_attempt = request.session.pop("etsy_oauth_attempt", None)
+    try:
+        attempt = deserialize_attempt(raw_attempt)
+        code = parse_callback(request.GET.urlencode(), attempt.state)
+        oauth = EtsyOAuth(settings.ETSY_KEYSTRING)
+        try:
+            token = oauth.exchange(code, attempt)
+        finally:
+            oauth.close()
+        save_etsy_connection(organization=organization, token=token)
+    except (ApiError, ValueError) as error:
+        messages.error(request, str(error))
+    else:
+        messages.success(request, "Etsy account connected securely.")
+    return redirect("etsy-connection")
+
+
+@login_required
+@require_POST
+def etsy_connection_disconnect(
+    request: HttpRequest, connection_id: object
+) -> HttpResponse:
+    organization = _active_organization(request)
+    connection = get_tenant_object_or_404(
+        ProviderConnection,
+        organization,
+        pk=connection_id,
+        provider=ProviderConnection.Provider.ETSY,
+    )
+    connection.delete()
+    messages.success(request, "Etsy account disconnected.")
+    return redirect("etsy-connection")
+
+
+def _etsy_is_configured() -> bool:
+    return bool(settings.ETSY_KEYSTRING and settings.ETSY_REDIRECT_URI)
 
 
 @login_required

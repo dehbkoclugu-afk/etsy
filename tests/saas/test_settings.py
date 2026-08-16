@@ -5,6 +5,7 @@ from django.core.exceptions import ImproperlyConfigured
 
 from pinforge_saas.settings import (
     resolve_private_media_root,
+    resolve_token_encryption_key,
     validate_production_settings,
 )
 
@@ -66,3 +67,29 @@ def test_development_private_media_root_stays_inside_project() -> None:
 
     assert root.name == "private-media"
     assert root.parent.name == "var"
+
+
+def test_production_requires_token_encryption_key() -> None:
+    with pytest.raises(ImproperlyConfigured, match="TOKEN_ENCRYPTION_KEY"):
+        validate_production_settings(
+            debug=False,
+            secret_key="production-secret-value",
+            allowed_hosts=["pinforge.example"],
+            database_engine="django.db.backends.postgresql",
+        )
+
+
+def test_development_token_key_is_stable_for_the_secret_key() -> None:
+    first = resolve_token_encryption_key(configured="", secret_key="dev-secret")
+    second = resolve_token_encryption_key(configured="", secret_key="dev-secret")
+
+    assert first == second
+    assert len(first) == 44
+
+
+def test_token_key_rejects_invalid_fernet_value() -> None:
+    with pytest.raises(ImproperlyConfigured, match="Fernet"):
+        resolve_token_encryption_key(
+            configured="not-a-fernet-key",
+            secret_key="dev-secret",
+        )

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Etsy connection · PinForge{% endblock %}
+{% block content %}
+  <h1>Etsy connection</h1>
+  {% if connections %}
+    <ul>
+      {% for connection in connections %}
+        <li>
+          Etsy account {{ connection.external_account_id }}
+          <form method="post" action="{% url 'etsy-connection-disconnect' connection.id %}">
+            {% csrf_token %}
+            <button type="submit">Disconnect</button>
+          </form>
+        </li>
+      {% endfor %}
+    </ul>
+  {% elif configured %}
+    <p>Connect Etsy to import listings into this workspace.</p>
+    <form method="post" action="{% url 'etsy-connection-start' %}">
+      {% csrf_token %}
+      <button type="submit">Connect Etsy</button>
+    </form>
+  {% else %}
+    <p>Etsy OAuth is not configured on this server.</p>
+  {% endif %}
+{% endblock %}

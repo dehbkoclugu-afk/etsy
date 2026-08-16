@@ -28,6 +28,7 @@ jobs:
     env:
       PINFORGE_DEBUG: "1"
       PINFORGE_SECRET_KEY: pinforge-ci-only-secret-68b89d0f3a4240d28ba54a4afcda9d74
+      PINFORGE_TOKEN_ENCRYPTION_KEY: MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=
       PINFORGE_ALLOWED_HOSTS: localhost,testserver
       PINFORGE_DB_NAME: pinforge_test
       PINFORGE_DB_USER: pinforge

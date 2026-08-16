@@ -9,6 +9,7 @@ description = "Etsy ürünlerinden Pinterest pin görselleri üreten masaüstü 
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+  "cryptography>=50,<51",
   "Django>=5.2,<5.3",
   "httpx>=0.28,<1",
   "keyring>=25,<26",
