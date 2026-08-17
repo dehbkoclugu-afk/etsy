@@ -25,7 +25,6 @@ class AppSettings:
     pinterest_redirect_uri: str = "http://localhost:53682/callback"
     pinterest_default_board_id: str = ""
     pinterest_board_mappings: dict[str, str] = field(default_factory=dict)
-    browser_etsy_shop_url: str = ""
     browser_pinterest_board: str = ""
     browser_channel: str = "chrome"
     export_directory: str = ""
@@ -83,17 +82,6 @@ class AppSettings:
                 parsed = urlparse(uri)
                 if parsed.scheme not in {"http", "https"} or not parsed.netloc:
                     raise ValueError(f"Geçersiz redirect URI: {uri}")
-        if self.browser_etsy_shop_url:
-            parsed_shop = urlparse(self.browser_etsy_shop_url)
-            if (
-                parsed_shop.scheme != "https"
-                or not parsed_shop.hostname
-                or not (
-                    parsed_shop.hostname == "etsy.com"
-                    or parsed_shop.hostname.endswith(".etsy.com")
-                )
-            ):
-                raise ValueError("Tarayıcı Etsy mağaza adresi etsy.com üzerinde olmalı")
         if self.browser_channel not in {"chrome", "msedge"}:
             raise ValueError("Tarayıcı kanalı chrome veya msedge olmalı")
         hosts = tuple(

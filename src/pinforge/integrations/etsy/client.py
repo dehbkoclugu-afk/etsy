@@ -43,16 +43,20 @@ class EtsyClient:
     def close(self) -> None:
         self.http.close()
 
-    def list_active_listings(self, shop_id: str) -> tuple[dict[str, Any], ...]:
+    def list_active_listings(
+        self, shop_id: str, *, limit: int | None = None
+    ) -> tuple[dict[str, Any], ...]:
         if not shop_id.isdigit():
             raise ValueError("Etsy shop_id sayısal olmalı")
+        if limit is not None and not 1 <= limit <= 100:
+            raise ValueError("Etsy ürün sınırı 1-100 arasında olmalı")
         listings: list[dict[str, Any]] = []
         offset = 0
         for _page in range(100):
             payload = self._get(
                 f"{self.API_ROOT}/shops/{shop_id}/listings/active",
                 params={
-                    "limit": 100,
+                    "limit": limit or 100,
                     "offset": offset,
                     "sort_on": "created",
                     "sort_order": "desc",
@@ -62,6 +66,8 @@ class EtsyClient:
             if not isinstance(results, list):
                 raise ApiError("Etsy listing yanıtında results listesi yok")
             listings.extend(item for item in results if isinstance(item, dict))
+            if limit is not None and len(listings) >= limit:
+                return tuple(listings[:limit])
             try:
                 count = int(payload.get("count", len(listings)))
             except (TypeError, ValueError) as exc:
@@ -92,13 +98,17 @@ class EtsyClient:
         return tuple(item for item in results if isinstance(item, dict))
 
     def import_shop(
-        self, shop_id: str, cache_directory: str | Path
+        self,
+        shop_id: str,
+        cache_directory: str | Path,
+        *,
+        limit: int | None = None,
     ) -> tuple[SourceProduct, ...]:
         cache = Path(cache_directory).expanduser().resolve()
         cache.mkdir(parents=True, exist_ok=True)
         products: list[SourceProduct] = []
         issues: list[str] = []
-        for listing in self.list_active_listings(shop_id):
+        for listing in self.list_active_listings(shop_id, limit=limit):
             listing_id = str(listing.get("listing_id", ""))
             if not listing_id:
                 continue

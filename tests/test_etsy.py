@@ -4,6 +4,7 @@ from io import BytesIO
 from pathlib import Path
 
 import httpx
+import pytest
 from PIL import Image
 
 from pinforge.integrations.etsy import EtsyClient
@@ -21,6 +22,7 @@ def test_etsy_import_paginates_and_caches_validated_image(tmp_path: Path) -> Non
         if request.url.path.endswith("/listings/active"):
             listing_calls += 1
             assert request.headers["x-api-key"] == "key:secret"
+            assert request.url.params["limit"] == "1"
             if request.url.params["offset"] == "0":
                 return httpx.Response(
                     200,
@@ -54,10 +56,23 @@ def test_etsy_import_paginates_and_caches_validated_image(tmp_path: Path) -> Non
 
     client = httpx.Client(transport=httpx.MockTransport(handler))
     etsy = EtsyClient("key", "secret", "token", http=JsonHttpClient(client))
-    products = etsy.import_shop("42", tmp_path / "cache")
+    products = etsy.import_shop("42", tmp_path / "cache", limit=1)
     assert listing_calls == 1
     assert products[0].title == "Welcome & Guide"
     assert products[0].price == 12.9
     assert products[0].image_paths[0].is_file()
     with Image.open(products[0].image_paths[0]) as cached:
         assert cached.format == "JPEG"
+
+
+def test_etsy_listing_limit_is_validated() -> None:
+    client = httpx.Client(
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(500, request=request)
+        )
+    )
+    etsy = EtsyClient("key", "secret", "token", http=JsonHttpClient(client))
+
+    for invalid in (0, 101):
+        with pytest.raises(ValueError, match="1-100"):
+            etsy.list_active_listings("42", limit=invalid)

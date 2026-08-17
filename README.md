@@ -20,14 +20,19 @@ tek uygulamada bulunur. Yerel klasör ve CSV akışı API hesabı olmadan da ça
 - JSON audit kayıtları, sağlık kontrolü ve belirsiz yayın uzlaştırma komutları
 - Uygulama kapalıyken çalışabilen CLI ve Windows Task Scheduler kurulumu
 - API yoksa PNG görselleri ve `schedule.csv` üreten bağımsız dışa aktarma yolu
-- API anahtarı olmadan kalıcı Chrome/Edge oturumuyla Etsy → Pin → Pinterest otomasyonu
+- Resmî Etsy API + kalıcı Pinterest oturumuyla Etsy → Pin → Pinterest otomasyonu
 
-## API anahtarı olmadan tam otomasyon
+## Etsy API-first otomasyon
 
 Bu mod normal çalışırken ChatGPT veya başka bir yapay zekâ servisine istek atmaz.
-Etsy ürün bilgilerini mağaza sayfasındaki yapılandırılmış veriden alır, mevcut yerel
-şablon motoruyla Pin'i üretir ve Pinterest'in yayın ekranını kalıcı bir tarayıcı
-profiliyle doldurur.
+Etsy ürün bilgilerini ve görsellerini resmî Open API v3 üzerinden alır, mevcut yerel
+şablon motoruyla Pin'i üretir. Pinterest Standard API erişimi hazır olana kadar
+yalnız yayın adımı kalıcı bir tarayıcı profili kullanır.
+
+Önce **Ayarlar** ekranında Etsy Seller App keystring, shared secret, Shop ID ve
+HTTPS redirect URI değerlerini kaydedip **Etsy hesabını bağla** ile OAuth'u
+tamamlayın. PinForge yalnızca `listings_r` ve `shops_r` izinlerini ister; Etsy
+sayfalarını kazımaz.
 
 İlk kullanımda yalnızca bir kez hesaplara giriş yapın:
 
@@ -35,16 +40,15 @@ profiliyle doldurur.
 pinforge browser-login
 ```
 
-Açılan Chrome penceresinde Etsy ve Pinterest oturumlarını tamamlayıp terminalde
-Enter'a basın. Parolalar PinForge tarafından okunmaz veya ayar dosyasına yazılmaz;
-tarayıcı kendi profilinde oturumu saklar.
+Açılan Chrome penceresinde Pinterest oturumunu tamamlayıp terminalde Enter'a basın.
+Parola PinForge tarafından okunmaz veya ayar dosyasına yazılmaz; tarayıcı kendi
+profilinde oturumu saklar.
 
 Sonrasında mağazadaki en yeni ürünü çekip `text_overlay` şablonuyla Pin üretmek ve
 adı verilen panoya yayınlamak tek komuttur:
 
 ```bash
-pinforge browser-run "https://www.etsy.com/shop/MAGAZA_ADI" \
-  --board "PANO ADI" --limit 1
+pinforge auto-run --board "PANO ADI" --limit 1
 ```
 
 Önce yayınlamadan denemek için `--dry-run`, Edge kullanmak için

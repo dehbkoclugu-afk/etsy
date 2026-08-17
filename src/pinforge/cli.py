@@ -16,7 +16,6 @@ from pinforge.growth.service import GrowthService
 from pinforge.importers.folder import FolderImporter, ManifestError
 from pinforge.integrations.http import ApiError
 from pinforge.integrations.browser_automation import (
-    EtsyBrowserImporter,
     PersistentBrowser,
     PinterestBrowserClient,
 )
@@ -70,29 +69,26 @@ def parser() -> argparse.ArgumentParser:
 
     browser_login = sub.add_parser(
         "browser-login",
-        help="API anahtarı olmadan kullanılacak kalıcı Etsy/Pinterest oturumunu aç",
+        help="Pinterest için kullanılacak kalıcı tarayıcı oturumunu aç",
     )
     browser_login.add_argument(
         "--channel", choices=("chrome", "msedge"), default="chrome"
     )
 
-    browser_run = sub.add_parser(
-        "browser-run",
-        help="Etsy ürünlerini çek, Pin üret ve Pinterest'e otomatik yayınla",
+    auto_run = sub.add_parser(
+        "auto-run",
+        help="Etsy API'den ürün çek, Pin üret ve Pinterest'e otomatik yayınla",
     )
-    browser_run.add_argument("shop_url")
-    browser_run.add_argument("--board", required=True, help="Pinterest pano adı")
-    browser_run.add_argument("--limit", type=int, default=1)
-    browser_run.add_argument("--template", default="text_overlay")
-    browser_run.add_argument(
-        "--channel", choices=("chrome", "msedge"), default="chrome"
-    )
-    browser_run.add_argument(
+    auto_run.add_argument("--board", required=True, help="Pinterest pano adı")
+    auto_run.add_argument("--limit", type=int, default=1)
+    auto_run.add_argument("--template", default="text_overlay")
+    auto_run.add_argument("--channel", choices=("chrome", "msedge"), default="chrome")
+    auto_run.add_argument(
         "--headless",
         action="store_true",
         help="Kaydedilmiş oturumla tarayıcıyı görünmeden çalıştır",
     )
-    browser_run.add_argument(
+    auto_run.add_argument(
         "--dry-run",
         action="store_true",
         help="Ürünleri çekip Pin üret; Pinterest'e yükleme",
@@ -175,8 +171,8 @@ def main(argv: list[str] | None = None) -> int:
         from pinforge.ui.app import main as gui_main
 
         return gui_main(data_directory=args.data_dir)
-    if args.command in {"browser-login", "browser-run"}:
-        return _browser_command(args)
+    if args.command == "browser-login":
+        return _browser_login(args)
     if args.command in {"validate", "render-folder"}:
         return _local_command(args)
 
@@ -186,6 +182,8 @@ def main(argv: list[str] | None = None) -> int:
             return _generate_copy(args, runtime)
         if args.command == "etsy-import":
             return _etsy_import(args, runtime)
+        if args.command == "auto-run":
+            return _automation_run(args, runtime)
         if args.command == "pinterest-boards":
             for board in runtime.pinterest_client().list_boards():
                 print(f"{board.id}\t{board.name}")
@@ -362,79 +360,76 @@ def _local_command(args: argparse.Namespace) -> int:
         return 2
 
 
-def _browser_command(args: argparse.Namespace) -> int:
+def _browser_login(args: argparse.Namespace) -> int:
     profile = args.data_dir.expanduser().resolve() / "browser-profile"
-    if args.command == "browser-login":
-        try:
-            with PersistentBrowser(profile, channel=args.channel) as browser:
-                browser.prepare_login()
-                print(
-                    "Etsy ve Pinterest hesaplarına açılan pencerede giriş yapın. "
-                    "Bitince bu terminalde Enter'a basın."
-                )
-                input()
-            print("Kalıcı tarayıcı oturumu kaydedildi")
-            return 0
-        except (OSError, RuntimeError, ValueError) as exc:
-            print(f"Hata: {exc}", file=sys.stderr)
-            return 2
+    try:
+        with PersistentBrowser(profile, channel=args.channel) as browser:
+            browser.prepare_pinterest_login()
+            print(
+                "Pinterest hesabına açılan pencerede giriş yapın. "
+                "Bitince bu terminalde Enter'a basın."
+            )
+            input()
+        print("Kalıcı Pinterest tarayıcı oturumu kaydedildi")
+        return 0
+    except (OSError, RuntimeError, ValueError) as exc:
+        print(f"Hata: {exc}", file=sys.stderr)
+        return 2
 
+
+def _automation_run(args: argparse.Namespace, runtime: PinForgeRuntime) -> int:
     if not 1 <= args.limit <= 20:
         print("Hata: --limit 1-20 arasında olmalı", file=sys.stderr)
         return 2
-    runtime = PinForgeRuntime(args.data_dir, SecretStore())
     try:
-        output = runtime.data_directory / "browser-automation"
+        output = runtime.data_directory / "automation"
         cache = output / "etsy-cache"
+        products = runtime.etsy_client().import_shop(
+            runtime.settings.etsy_shop_id,
+            cache,
+            limit=args.limit,
+        )
+        runtime.repository.save_products(products)
+        existing = {
+            (draft.product_id, draft.template_id): draft
+            for draft in runtime.repository.list_drafts()
+        }
+        ready: list[PinDraft] = []
+        for product in products:
+            previous = existing.get((product.id, args.template))
+            if previous is not None and previous.status is PinStatus.PUBLISHED:
+                print(f"Atlandı (daha önce yayınlandı): {product.title}")
+                continue
+            if (
+                previous is not None
+                and previous.status is PinStatus.READY
+                and previous.image_path is not None
+                and previous.image_path.is_file()
+            ):
+                draft = previous
+            else:
+                exported = BundleExporter().export_product(
+                    product,
+                    (args.template,),
+                    output / "pins" / product.id,
+                    brand=runtime.brand_kit(),
+                    overwrite=True,
+                )
+                runtime.repository.save_drafts(exported.drafts)
+                draft = exported.drafts[0]
+            ready.append(draft)
+            print(f"Hazırlandı: {product.title}")
+        if args.dry_run:
+            print(f"dry-run: {len(ready)} Pin hazırlandı, yayınlanmadı")
+            return 0
+        for draft in ready:
+            runtime.repository.schedule(draft.id, utc_now(), args.board)
+        profile = args.data_dir.expanduser().resolve() / "browser-profile"
         with PersistentBrowser(
             profile,
             channel=args.channel,
             headless=args.headless,
         ) as browser:
-            products = EtsyBrowserImporter(browser).import_shop(
-                args.shop_url,
-                cache,
-                limit=args.limit,
-            )
-            runtime.repository.save_products(products)
-            existing = {
-                (draft.product_id, draft.template_id): draft
-                for draft in runtime.repository.list_drafts()
-            }
-            ready: list[PinDraft] = []
-            for product in products:
-                previous = existing.get((product.id, args.template))
-                if previous is not None and previous.status is PinStatus.PUBLISHED:
-                    print(f"Atlandı (daha önce yayınlandı): {product.title}")
-                    continue
-                if (
-                    previous is not None
-                    and previous.status is PinStatus.READY
-                    and previous.image_path is not None
-                    and previous.image_path.is_file()
-                ):
-                    draft = previous
-                else:
-                    exported = BundleExporter().export_product(
-                        product,
-                        (args.template,),
-                        output / "pins" / product.id,
-                        brand=runtime.brand_kit(),
-                        overwrite=True,
-                    )
-                    runtime.repository.save_drafts(exported.drafts)
-                    draft = exported.drafts[0]
-                ready.append(draft)
-                print(f"Hazırlandı: {product.title}")
-            if args.dry_run:
-                print(f"dry-run: {len(ready)} Pin hazırlandı, yayınlanmadı")
-                return 0
-            for draft in ready:
-                runtime.repository.schedule(
-                    draft.id,
-                    utc_now(),
-                    args.board,
-                )
             scheduler = SchedulerService(
                 runtime.repository,
                 PinterestBrowserClient(browser, board_name=args.board),
@@ -454,8 +449,6 @@ def _browser_command(args: argparse.Namespace) -> int:
     except (ApiError, OSError, RuntimeError, ValueError) as exc:
         print(f"Hata: {exc}", file=sys.stderr)
         return 2
-    finally:
-        runtime.close()
 
 
 def _generate_copy(args: argparse.Namespace, runtime: PinForgeRuntime) -> int:
