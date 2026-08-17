@@ -15,6 +15,7 @@ python -m PyInstaller `
     --name PinForge `
     --collect-all PySide6 `
     --collect-all keyring `
+    --collect-all playwright `
     --collect-data pinforge `
     src/pinforge/ui/app.py
 

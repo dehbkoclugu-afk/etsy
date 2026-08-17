@@ -37,22 +37,27 @@ class EtsyClient:
             "x-api-key": f"{keystring}:{shared_secret}",
             "authorization": f"Bearer {access_token}",
         }
+        self.user_id = _user_id_from_access_token(access_token)
         self.last_issues: tuple[str, ...] = ()
         self.refresh_access_token = refresh_access_token
 
     def close(self) -> None:
         self.http.close()
 
-    def list_active_listings(self, shop_id: str) -> tuple[dict[str, Any], ...]:
+    def list_active_listings(
+        self, shop_id: str, *, limit: int | None = None
+    ) -> tuple[dict[str, Any], ...]:
         if not shop_id.isdigit():
             raise ValueError("Etsy shop_id sayısal olmalı")
+        if limit is not None and not 1 <= limit <= 100:
+            raise ValueError("Etsy ürün sınırı 1-100 arasında olmalı")
         listings: list[dict[str, Any]] = []
         offset = 0
         for _page in range(100):
             payload = self._get(
                 f"{self.API_ROOT}/shops/{shop_id}/listings/active",
                 params={
-                    "limit": 100,
+                    "limit": limit or 100,
                     "offset": offset,
                     "sort_on": "created",
                     "sort_order": "desc",
@@ -62,6 +67,8 @@ class EtsyClient:
             if not isinstance(results, list):
                 raise ApiError("Etsy listing yanıtında results listesi yok")
             listings.extend(item for item in results if isinstance(item, dict))
+            if limit is not None and len(listings) >= limit:
+                return tuple(listings[:limit])
             try:
                 count = int(payload.get("count", len(listings)))
             except (TypeError, ValueError) as exc:
@@ -73,6 +80,35 @@ class EtsyClient:
             raise ApiError("Etsy listing sayfalama sınırı aşıldı")
         return tuple(listings)
 
+    def list_owned_shops(self, user_id: str) -> tuple[dict[str, Any], ...]:
+        if not user_id.isdigit():
+            raise ValueError("Etsy user_id sayısal olmalı")
+        payload = self._get(f"{self.API_ROOT}/users/{user_id}/shops")
+        results = payload.get("results", [])
+        if not isinstance(results, list):
+            raise ApiError("Etsy mağaza yanıtında results listesi yok")
+        return tuple(item for item in results if isinstance(item, dict))
+
+    def resolve_shop_id(self, configured_shop_id: str = "") -> str:
+        if configured_shop_id:
+            if not configured_shop_id.isdigit():
+                raise ValueError("Etsy shop_id sayısal olmalı")
+            return configured_shop_id
+        if not self.user_id:
+            raise ValueError(
+                "Shop ID otomatik bulunamadı; Etsy OAuth bağlantısını yeniden kurun"
+            )
+        shop_ids = tuple(
+            str(shop.get("shop_id", ""))
+            for shop in self.list_owned_shops(self.user_id)
+            if str(shop.get("shop_id", "")).isdigit()
+        )
+        if len(shop_ids) == 1:
+            return shop_ids[0]
+        if not shop_ids:
+            raise ValueError("Etsy hesabında erişilebilir mağaza bulunamadı")
+        raise ValueError("Birden fazla Etsy mağazası bulundu; Ayarlar'da Shop ID seçin")
+
     def listing_images(self, listing_id: str) -> tuple[dict[str, Any], ...]:
         payload = self._get(
             f"{self.API_ROOT}/listings/{listing_id}/images",
@@ -83,13 +119,18 @@ class EtsyClient:
         return tuple(item for item in results if isinstance(item, dict))
 
     def import_shop(
-        self, shop_id: str, cache_directory: str | Path
+        self,
+        shop_id: str,
+        cache_directory: str | Path,
+        *,
+        limit: int | None = None,
     ) -> tuple[SourceProduct, ...]:
+        shop_id = self.resolve_shop_id(shop_id)
         cache = Path(cache_directory).expanduser().resolve()
         cache.mkdir(parents=True, exist_ok=True)
         products: list[SourceProduct] = []
         issues: list[str] = []
-        for listing in self.list_active_listings(shop_id):
+        for listing in self.list_active_listings(shop_id, limit=limit):
             listing_id = str(listing.get("listing_id", ""))
             if not listing_id:
                 continue
@@ -164,9 +205,15 @@ class EtsyClient:
                 raise
             access_token = self.refresh_access_token()
             self.headers["authorization"] = f"Bearer {access_token}"
+            self.user_id = _user_id_from_access_token(access_token)
             return self.http.request(
                 "GET", url, headers=self.headers, provider="etsy", **kwargs
             )
+
+
+def _user_id_from_access_token(access_token: str) -> str:
+    user_id, separator, _token = access_token.partition(".")
+    return user_id if separator and user_id.isdigit() else ""
 
 
 def _image_url(image: dict[str, Any]) -> str:

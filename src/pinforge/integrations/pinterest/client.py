@@ -76,6 +76,13 @@ class PinterestClient:
             )
         return tuple(boards)
 
+    def get_user_account(self) -> dict[str, Any]:
+        payload = self._safe_get(f"{self.API_ROOT}/user_account")
+        account_id = payload.get("id") or payload.get("username")
+        if not account_id:
+            raise ApiError("Pinterest hesap yanıtında kimlik yok")
+        return payload
+
     def _safe_get(self, url: str, **kwargs: Any) -> dict[str, Any]:
         try:
             return self.http.request(

@@ -32,13 +32,9 @@ def validate_production_settings(
     if debug:
         return
     if secret_key == DEV_SECRET_KEY:
-        raise ImproperlyConfigured(
-            "PINFORGE_SECRET_KEY must be set in production"
-        )
+        raise ImproperlyConfigured("PINFORGE_SECRET_KEY must be set in production")
     if not allowed_hosts:
-        raise ImproperlyConfigured(
-            "PINFORGE_ALLOWED_HOSTS must be set in production"
-        )
+        raise ImproperlyConfigured("PINFORGE_ALLOWED_HOSTS must be set in production")
     if database_engine != "django.db.backends.postgresql":
         raise ImproperlyConfigured("PostgreSQL is required in production")
     if not token_encryption_key:
@@ -81,9 +77,8 @@ def resolve_private_media_root(
         return path.resolve()
     if debug or test_sqlite:
         return BASE_DIR / "var" / "private-media"
-    raise ImproperlyConfigured(
-        "PINFORGE_PRIVATE_MEDIA_ROOT must be set in production"
-    )
+    raise ImproperlyConfigured("PINFORGE_PRIVATE_MEDIA_ROOT must be set in production")
+
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -124,8 +119,7 @@ TEMPLATES = [
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": (
-            "django.contrib.auth.password_validation."
-            "UserAttributeSimilarityValidator"
+            "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
         )
     },
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
@@ -171,7 +165,18 @@ TOKEN_ENCRYPTION_KEY = resolve_token_encryption_key(
     secret_key=SECRET_KEY,
 )
 ETSY_KEYSTRING = os.environ.get("PINFORGE_ETSY_KEYSTRING", "")
+ETSY_SHARED_SECRET = os.environ.get("PINFORGE_ETSY_SHARED_SECRET", "")
 ETSY_REDIRECT_URI = os.environ.get("PINFORGE_ETSY_REDIRECT_URI", "")
+PINTEREST_APP_ID = os.environ.get("PINFORGE_PINTEREST_APP_ID", "")
+PINTEREST_APP_SECRET = os.environ.get("PINFORGE_PINTEREST_APP_SECRET", "")
+PINTEREST_REDIRECT_URI = os.environ.get("PINFORGE_PINTEREST_REDIRECT_URI", "")
+PINTEREST_ALLOWED_DESTINATION_HOSTS = tuple(
+    host.strip().lower()
+    for host in os.environ.get(
+        "PINFORGE_PINTEREST_ALLOWED_DESTINATION_HOSTS", "etsy.com"
+    ).split(",")
+    if host.strip()
+)
 
 MEDIA_ROOT = resolve_private_media_root(
     configured=os.environ.get("PINFORGE_PRIVATE_MEDIA_ROOT", ""),

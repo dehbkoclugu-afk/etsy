@@ -10,9 +10,31 @@
   </dl>
   {% if asset and creative.status == "ready" %}
     <p><a href="{% url 'creative-download' creative.id %}">Download PNG</a></p>
+    {% if publication_form.fields.board.queryset %}
+      <h2>Publish to Pinterest</h2>
+      <form method="post" action="{% url 'creative-publish' creative.id %}">
+        {% csrf_token %}
+        {{ publication_form.as_p }}
+        <button type="submit">Queue Pin</button>
+      </form>
+    {% else %}
+      <p><a href="{% url 'pinterest-connection' %}">Connect Pinterest and choose a board</a> to publish.</p>
+    {% endif %}
   {% elif creative.status == "failed" %}
     <p>Rendering failed with code {{ creative.error_code }}. Submit the creative again to retry.</p>
   {% else %}
     <p>Your private render is being prepared. Refresh this page shortly.</p>
+  {% endif %}
+  {% if publications %}
+    <h2>Publication history</h2>
+    <ul>
+      {% for publication in publications %}
+        <li>
+          {{ publication.board.name }} — {{ publication.get_status_display }}
+          {% if publication.remote_url %}<a href="{{ publication.remote_url }}" rel="noreferrer">Open Pin</a>{% endif %}
+          {% if publication.error_message %}({{ publication.error_message }}){% endif %}
+        </li>
+      {% endfor %}
+    </ul>
   {% endif %}
 {% endblock %}

@@ -20,6 +20,45 @@ tek uygulamada bulunur. Yerel klasör ve CSV akışı API hesabı olmadan da ça
 - JSON audit kayıtları, sağlık kontrolü ve belirsiz yayın uzlaştırma komutları
 - Uygulama kapalıyken çalışabilen CLI ve Windows Task Scheduler kurulumu
 - API yoksa PNG görselleri ve `schedule.csv` üreten bağımsız dışa aktarma yolu
+- Resmî Etsy API + kalıcı Pinterest oturumuyla Etsy → Pin → Pinterest otomasyonu
+
+## Etsy API-first otomasyon
+
+Bu mod normal çalışırken ChatGPT veya başka bir yapay zekâ servisine istek atmaz.
+Etsy ürün bilgilerini ve görsellerini resmî Open API v3 üzerinden alır, mevcut yerel
+şablon motoruyla Pin'i üretir. Pinterest Standard API erişimi hazır olana kadar
+yalnız yayın adımı kalıcı bir tarayıcı profili kullanır.
+
+Önce **Ayarlar** ekranında Etsy Seller App keystring, shared secret ve HTTPS
+redirect URI değerlerini kaydedip **Etsy hesabını bağla** ile OAuth'u tamamlayın.
+PinForge tek mağazalı hesaplarda sayısal Shop ID'yi OAuth bağlantısından otomatik
+bulur. Birden fazla mağazanız varsa Shop ID alanını elle doldurun. Uygulama yalnızca
+`listings_r` ve `shops_r` izinlerini ister; Etsy sayfalarını kazımaz.
+
+İlk kullanımda yalnızca bir kez hesaplara giriş yapın:
+
+```bash
+pinforge browser-login
+```
+
+Açılan Chrome penceresinde Pinterest oturumunu tamamlayıp terminalde Enter'a basın.
+Parola PinForge tarafından okunmaz veya ayar dosyasına yazılmaz; tarayıcı kendi
+profilinde oturumu saklar.
+
+Sonrasında mağazadaki en yeni ürünü çekip `text_overlay` şablonuyla Pin üretmek ve
+adı verilen panoya yayınlamak tek komuttur:
+
+```bash
+pinforge auto-run --board "PANO ADI" --limit 1
+```
+
+Önce yayınlamadan denemek için `--dry-run`, Edge kullanmak için
+`--channel msedge`, kaydedilmiş oturumla arka planda çalıştırmak için `--headless`
+ekleyin. Daha önce başarıyla yayınlanmış aynı ürün/şablon çifti
+otomatik atlanır. Pinterest'te yayın tıklanıp sonuç doğrulanamazsa program tekrar
+göndermez; kaydı `publish_unknown` durumuna alarak çift Pin'i engeller. CAPTCHA veya
+insan doğrulaması çıkarsa bunu aşmaya çalışmaz; açık tarayıcıda kullanıcı işlemi
+bekler.
 
 ## Büyüme özellikleri
 
@@ -108,8 +147,9 @@ isteğinde seçili şablonların tamamını üretir.
 
 ### Etsy
 
-Etsy Developer uygulamasındaki keystring, shared secret, sayısal Shop ID ve kayıtlı
-HTTPS redirect URI değerlerini girin. Sonra **Etsy hesabını bağla** düğmesine basın;
+Etsy Developer uygulamasındaki keystring, shared secret ve kayıtlı HTTPS redirect
+URI değerlerini girin. Tek mağazalı hesaplarda Shop ID otomatik bulunur. Sonra
+**Etsy hesabını bağla** düğmesine basın;
 tarayıcıdaki yetkilendirme tamamlanınca tam callback URL'yi uygulamaya yapıştırın.
 Uygulama yalnızca `listings_r` ve `shops_r` izinlerini ister.
 
@@ -226,16 +266,19 @@ python manage.py runserver
 
 Tarayıcıdan hesap oluşturduktan sonra temel ürün akışı şöyledir:
 
-1. İsteğe bağlı Etsy OAuth akışı için `PINFORGE_ETSY_KEYSTRING` ve kayıtlı HTTPS
-   callback adresini `PINFORGE_ETSY_REDIRECT_URI` olarak ayarlayın. **Etsy
-   connection** sayfası PKCE ile hesabı bağlar ve tokenları tenant'a bağlı,
-   şifrelenmiş bir kayıtta saklar.
+1. Etsy OAuth ve senkronizasyonu için `PINFORGE_ETSY_KEYSTRING`,
+   `PINFORGE_ETSY_SHARED_SECRET` ve kayıtlı HTTPS callback adresini ayarlayın.
+   **Etsy connection** sayfası PKCE ile hesabı bağlar, tokenları tenant'a bağlı
+   şifreli saklar ve **Sync listings** ile mağaza ürünlerini özel kataloğa çeker.
 2. **Brand kit** sayfasında mağaza adı, renkler ve paketlenmiş fontları kaydedin.
 3. **Add listing** ile Etsy ilan bağlantısını, fiyatı, etiketleri ve 1–5 PNG/JPEG
    ürün görselini özel kataloğa yükleyin.
 4. İlan sayfasında beş Pinterest şablonundan birini ve pin metnini seçip yaratıcıyı
    kuyruğa alın.
-5. Worker renderı tamamladığında yaratıcı sayfasından 1000 × 1500 PNG'yi indirin.
+5. Pinterest uygulama kimliklerini ve callback adresini ayarlayıp **Pinterest**
+   sayfasından hesabı bağlayın; panolar otomatik eşitlenir.
+6. Worker renderı tamamladığında yaratıcı sayfasından 1000 × 1500 PNG'yi indirin
+   veya bir pano seçerek hemen/zamanlanmış yayın işini kuyruğa alın.
 
 Production'da OAuth token şifrelemesi için kalıcı bir Fernet anahtarı zorunludur:
 

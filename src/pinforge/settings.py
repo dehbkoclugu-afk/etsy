@@ -25,6 +25,8 @@ class AppSettings:
     pinterest_redirect_uri: str = "http://localhost:53682/callback"
     pinterest_default_board_id: str = ""
     pinterest_board_mappings: dict[str, str] = field(default_factory=dict)
+    browser_pinterest_board: str = ""
+    browser_channel: str = "chrome"
     export_directory: str = ""
     import_cache_directory: str = ""
     schedule_slots: tuple[str, ...] = ("09:00", "12:30", "15:00", "18:30", "21:00")
@@ -80,6 +82,8 @@ class AppSettings:
                 parsed = urlparse(uri)
                 if parsed.scheme not in {"http", "https"} or not parsed.netloc:
                     raise ValueError(f"Geçersiz redirect URI: {uri}")
+        if self.browser_channel not in {"chrome", "msedge"}:
+            raise ValueError("Tarayıcı kanalı chrome veya msedge olmalı")
         hosts = tuple(
             dict.fromkeys(
                 host.strip().lower()

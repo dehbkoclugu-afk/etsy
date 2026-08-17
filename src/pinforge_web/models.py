@@ -105,6 +105,7 @@ class TimestampedUUIDModel(models.Model):
 class ProviderConnection(TimestampedUUIDModel):
     class Provider(models.TextChoices):
         ETSY = "etsy", "Etsy"
+        PINTEREST = "pinterest", "Pinterest"
 
     organization = models.ForeignKey(
         Organization,
@@ -137,6 +138,13 @@ class Shop(TimestampedUUIDModel):
         Organization,
         on_delete=models.CASCADE,
         related_name="shops",
+    )
+    connection = models.ForeignKey(
+        ProviderConnection,
+        on_delete=models.SET_NULL,
+        related_name="shops",
+        null=True,
+        blank=True,
     )
     source = models.CharField(max_length=16, choices=Source.choices)
     source_shop_id = models.CharField(max_length=128)
@@ -328,9 +336,82 @@ class CreativeAsset(TimestampedUUIDModel):
         ]
 
 
+class PinterestBoard(TimestampedUUIDModel):
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name="pinterest_boards",
+    )
+    connection = models.ForeignKey(
+        ProviderConnection,
+        on_delete=models.CASCADE,
+        related_name="pinterest_boards",
+    )
+    external_board_id = models.CharField(max_length=128)
+    name = models.CharField(max_length=200)
+    description = models.CharField(max_length=500, blank=True)
+    active = models.BooleanField(default=True)
+    synchronized_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ("name", "id")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("connection", "external_board_id"),
+                name="unique_pinterest_board_per_connection",
+            )
+        ]
+
+
+class PinPublication(TimestampedUUIDModel):
+    class Status(models.TextChoices):
+        QUEUED = "queued", "Queued"
+        PUBLISHING = "publishing", "Publishing"
+        PUBLISHED = "published", "Published"
+        PUBLISH_UNKNOWN = "publish_unknown", "Needs review"
+        FAILED = "failed", "Failed"
+
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name="pin_publications",
+    )
+    creative = models.ForeignKey(
+        Creative,
+        on_delete=models.CASCADE,
+        related_name="publications",
+    )
+    connection = models.ForeignKey(
+        ProviderConnection,
+        on_delete=models.PROTECT,
+        related_name="pin_publications",
+    )
+    board = models.ForeignKey(
+        PinterestBoard,
+        on_delete=models.PROTECT,
+        related_name="pin_publications",
+    )
+    status = models.CharField(
+        max_length=24,
+        choices=Status.choices,
+        default=Status.QUEUED,
+    )
+    scheduled_at = models.DateTimeField(default=timezone.now)
+    remote_pin_id = models.CharField(max_length=128, blank=True)
+    remote_url = models.URLField(max_length=2_000, blank=True)
+    published_at = models.DateTimeField(null=True, blank=True)
+    error_code = models.CharField(max_length=64, blank=True)
+    error_message = models.CharField(max_length=500, blank=True)
+
+    class Meta:
+        ordering = ("-scheduled_at", "-created_at", "id")
+
+
 class Job(TimestampedUUIDModel):
     class Kind(models.TextChoices):
         RENDER_CREATIVE = "render_creative", "Render creative"
+        SYNC_ETSY = "sync_etsy", "Sync Etsy listings"
+        PUBLISH_PINTEREST = "publish_pinterest", "Publish to Pinterest"
 
     class Status(models.TextChoices):
         PENDING = "pending", "Pending"

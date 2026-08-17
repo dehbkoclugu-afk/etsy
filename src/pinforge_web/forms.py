@@ -7,7 +7,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.files.uploadedfile import UploadedFile
 from django.core.validators import RegexValidator
 
-from pinforge_web.models import BrandKit, Creative, User
+from pinforge_web.models import BrandKit, Creative, PinterestBoard, User
 
 
 class MultipleFileInput(forms.ClearableFileInput):
@@ -115,6 +115,23 @@ class CreativeForm(forms.Form):
         help_text="Describe the visual for accessibility and Pinterest search.",
         widget=forms.Textarea(attrs={"rows": 3}),
     )
+
+
+class PinPublicationForm(forms.Form):
+    board = forms.ModelChoiceField(queryset=PinterestBoard.objects.none())
+    scheduled_at = forms.DateTimeField(
+        required=False,
+        label="Publish at (leave blank for now)",
+        widget=forms.DateTimeInput(attrs={"type": "datetime-local"}),
+    )
+
+    def __init__(self, *args: object, organization: object, **kwargs: object) -> None:
+        super().__init__(*args, **kwargs)
+        self.fields["board"].queryset = PinterestBoard.objects.filter(
+            organization=organization,
+            active=True,
+            connection__active=True,
+        ).select_related("connection")
 
 
 class SignUpForm(forms.Form):

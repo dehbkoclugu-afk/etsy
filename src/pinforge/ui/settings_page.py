@@ -113,7 +113,7 @@ class SettingsPage(QWidget):
         self.etsy_redirect = QLineEdit()
         form.addRow("Keystring", self.etsy_keystring)
         form.addRow("Shared secret", self.etsy_secret)
-        form.addRow("Shop ID", self.etsy_shop_id)
+        form.addRow("Shop ID (opsiyonel)", self.etsy_shop_id)
         form.addRow("Redirect URI", self.etsy_redirect)
         connect = QPushButton("Etsy hesabını bağla")
         connect.clicked.connect(self._connect_etsy)
