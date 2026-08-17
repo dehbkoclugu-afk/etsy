@@ -37,6 +37,7 @@ class EtsyClient:
             "x-api-key": f"{keystring}:{shared_secret}",
             "authorization": f"Bearer {access_token}",
         }
+        self.user_id = _user_id_from_access_token(access_token)
         self.last_issues: tuple[str, ...] = ()
         self.refresh_access_token = refresh_access_token
 
@@ -88,6 +89,26 @@ class EtsyClient:
             raise ApiError("Etsy mağaza yanıtında results listesi yok")
         return tuple(item for item in results if isinstance(item, dict))
 
+    def resolve_shop_id(self, configured_shop_id: str = "") -> str:
+        if configured_shop_id:
+            if not configured_shop_id.isdigit():
+                raise ValueError("Etsy shop_id sayısal olmalı")
+            return configured_shop_id
+        if not self.user_id:
+            raise ValueError(
+                "Shop ID otomatik bulunamadı; Etsy OAuth bağlantısını yeniden kurun"
+            )
+        shop_ids = tuple(
+            str(shop.get("shop_id", ""))
+            for shop in self.list_owned_shops(self.user_id)
+            if str(shop.get("shop_id", "")).isdigit()
+        )
+        if len(shop_ids) == 1:
+            return shop_ids[0]
+        if not shop_ids:
+            raise ValueError("Etsy hesabında erişilebilir mağaza bulunamadı")
+        raise ValueError("Birden fazla Etsy mağazası bulundu; Ayarlar'da Shop ID seçin")
+
     def listing_images(self, listing_id: str) -> tuple[dict[str, Any], ...]:
         payload = self._get(
             f"{self.API_ROOT}/listings/{listing_id}/images",
@@ -104,6 +125,7 @@ class EtsyClient:
         *,
         limit: int | None = None,
     ) -> tuple[SourceProduct, ...]:
+        shop_id = self.resolve_shop_id(shop_id)
         cache = Path(cache_directory).expanduser().resolve()
         cache.mkdir(parents=True, exist_ok=True)
         products: list[SourceProduct] = []
@@ -183,9 +205,15 @@ class EtsyClient:
                 raise
             access_token = self.refresh_access_token()
             self.headers["authorization"] = f"Bearer {access_token}"
+            self.user_id = _user_id_from_access_token(access_token)
             return self.http.request(
                 "GET", url, headers=self.headers, provider="etsy", **kwargs
             )
+
+
+def _user_id_from_access_token(access_token: str) -> str:
+    user_id, separator, _token = access_token.partition(".")
+    return user_id if separator and user_id.isdigit() else ""
 
 
 def _image_url(image: dict[str, Any]) -> str:

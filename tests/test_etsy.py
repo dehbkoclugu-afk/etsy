@@ -76,3 +76,38 @@ def test_etsy_listing_limit_is_validated() -> None:
     for invalid in (0, 101):
         with pytest.raises(ValueError, match="1-100"):
             etsy.list_active_listings("42", limit=invalid)
+
+
+def test_etsy_shop_id_is_discovered_from_oauth_user() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path.endswith("/users/12345678/shops")
+        return httpx.Response(200, json={"results": [{"shop_id": 42}]})
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    etsy = EtsyClient(
+        "key",
+        "secret",
+        "12345678.oauth-token",
+        http=JsonHttpClient(client),
+    )
+
+    assert etsy.resolve_shop_id() == "42"
+
+
+def test_etsy_shop_discovery_requires_explicit_id_for_multiple_shops() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={"results": [{"shop_id": 42}, {"shop_id": 84}]},
+        )
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    etsy = EtsyClient(
+        "key",
+        "secret",
+        "12345678.oauth-token",
+        http=JsonHttpClient(client),
+    )
+
+    with pytest.raises(ValueError, match="Birden fazla"):
+        etsy.resolve_shop_id()

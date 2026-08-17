@@ -29,10 +29,11 @@ Etsy ürün bilgilerini ve görsellerini resmî Open API v3 üzerinden alır, me
 şablon motoruyla Pin'i üretir. Pinterest Standard API erişimi hazır olana kadar
 yalnız yayın adımı kalıcı bir tarayıcı profili kullanır.
 
-Önce **Ayarlar** ekranında Etsy Seller App keystring, shared secret, Shop ID ve
-HTTPS redirect URI değerlerini kaydedip **Etsy hesabını bağla** ile OAuth'u
-tamamlayın. PinForge yalnızca `listings_r` ve `shops_r` izinlerini ister; Etsy
-sayfalarını kazımaz.
+Önce **Ayarlar** ekranında Etsy Seller App keystring, shared secret ve HTTPS
+redirect URI değerlerini kaydedip **Etsy hesabını bağla** ile OAuth'u tamamlayın.
+PinForge tek mağazalı hesaplarda sayısal Shop ID'yi OAuth bağlantısından otomatik
+bulur. Birden fazla mağazanız varsa Shop ID alanını elle doldurun. Uygulama yalnızca
+`listings_r` ve `shops_r` izinlerini ister; Etsy sayfalarını kazımaz.
 
 İlk kullanımda yalnızca bir kez hesaplara giriş yapın:
 
@@ -146,8 +147,9 @@ isteğinde seçili şablonların tamamını üretir.
 
 ### Etsy
 
-Etsy Developer uygulamasındaki keystring, shared secret, sayısal Shop ID ve kayıtlı
-HTTPS redirect URI değerlerini girin. Sonra **Etsy hesabını bağla** düğmesine basın;
+Etsy Developer uygulamasındaki keystring, shared secret ve kayıtlı HTTPS redirect
+URI değerlerini girin. Tek mağazalı hesaplarda Shop ID otomatik bulunur. Sonra
+**Etsy hesabını bağla** düğmesine basın;
 tarayıcıdaki yetkilendirme tamamlanınca tam callback URL'yi uygulamaya yapıştırın.
 Uygulama yalnızca `listings_r` ve `shops_r` izinlerini ister.
 
