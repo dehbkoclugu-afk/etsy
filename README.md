@@ -5,11 +5,6 @@ PinForge, Etsy ürünlerinden veya yerel görsellerden 1000 × 1500 Pinterest pi
 PNG/CSV dışa aktarma, SQLite yayın kuyruğu, Etsy içe aktarma ve Pinterest yayınlama
 tek uygulamada bulunur. Yerel klasör ve CSV akışı API hesabı olmadan da çalışır.
 
-API erişimi beklenirken kullanılabilen kişisel Pin stüdyosu:
-[PinForge Personal](https://pinforge-personal.cihangulveren34.chatgpt.site).
-Ürün görselini yalnız tarayıcıda işler, üç tasarım stiliyle 1000 × 1500 PNG üretir
-ve Pinterest'in manuel yayın ekranına geçiş verir.
-
 ## Özellikler
 
 - Beş şablon: Mockup Hero, List Stack, Split Compare, Text Overlay ve Grid Preview
@@ -25,6 +20,40 @@ ve Pinterest'in manuel yayın ekranına geçiş verir.
 - JSON audit kayıtları, sağlık kontrolü ve belirsiz yayın uzlaştırma komutları
 - Uygulama kapalıyken çalışabilen CLI ve Windows Task Scheduler kurulumu
 - API yoksa PNG görselleri ve `schedule.csv` üreten bağımsız dışa aktarma yolu
+- API anahtarı olmadan kalıcı Chrome/Edge oturumuyla Etsy → Pin → Pinterest otomasyonu
+
+## API anahtarı olmadan tam otomasyon
+
+Bu mod normal çalışırken ChatGPT veya başka bir yapay zekâ servisine istek atmaz.
+Etsy ürün bilgilerini mağaza sayfasındaki yapılandırılmış veriden alır, mevcut yerel
+şablon motoruyla Pin'i üretir ve Pinterest'in yayın ekranını kalıcı bir tarayıcı
+profiliyle doldurur.
+
+İlk kullanımda yalnızca bir kez hesaplara giriş yapın:
+
+```bash
+pinforge browser-login
+```
+
+Açılan Chrome penceresinde Etsy ve Pinterest oturumlarını tamamlayıp terminalde
+Enter'a basın. Parolalar PinForge tarafından okunmaz veya ayar dosyasına yazılmaz;
+tarayıcı kendi profilinde oturumu saklar.
+
+Sonrasında mağazadaki en yeni ürünü çekip `text_overlay` şablonuyla Pin üretmek ve
+adı verilen panoya yayınlamak tek komuttur:
+
+```bash
+pinforge browser-run "https://www.etsy.com/shop/MAGAZA_ADI" \
+  --board "PANO ADI" --limit 1
+```
+
+Önce yayınlamadan denemek için `--dry-run`, Edge kullanmak için
+`--channel msedge`, kaydedilmiş oturumla arka planda çalıştırmak için `--headless`
+ekleyin. Daha önce başarıyla yayınlanmış aynı ürün/şablon çifti
+otomatik atlanır. Pinterest'te yayın tıklanıp sonuç doğrulanamazsa program tekrar
+göndermez; kaydı `publish_unknown` durumuna alarak çift Pin'i engeller. CAPTCHA veya
+insan doğrulaması çıkarsa bunu aşmaya çalışmaz; açık tarayıcıda kullanıcı işlemi
+bekler.
 
 ## Büyüme özellikleri
 

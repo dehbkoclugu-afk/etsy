@@ -14,6 +14,7 @@ dependencies = [
   "httpx>=0.28,<1",
   "keyring>=25,<26",
   "Pillow>=12.3,<13",
+  "playwright>=1.55,<2",
   "psycopg[binary]>=3.2,<4",
   "PySide6>=6.8,<7",
   "tzdata>=2026.3,<2027",
