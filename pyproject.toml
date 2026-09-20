@@ -16,7 +16,7 @@ dependencies = [
   "Pillow>=12.3,<13",
   "psycopg[binary]>=3.2,<4",
   "PySide6>=6.8,<7",
-  "tzdata>=2026.3,<2027",
+  "tzdata>=2026.4,<2027",
 ]
 
 [project.optional-dependencies]
